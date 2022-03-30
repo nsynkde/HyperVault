@@ -50,12 +50,17 @@ class VAULT_API SPublisherWindow : public SCompoundWidget
 	// Capture Thumbnail from a File
 	UTexture2D* CreateThumbnailFromFile();
 
+	// Use unreals way of generating thumbnails
+	UTexture2D* CreateThumbnailFromAsset();
+
 	// All finished, gather everything and package.
 	FReply TryPackage();
 
 	void GetAssetDependanciesRecursive(const FName AssetPath, TSet<FName>& AllDependencies, const FString& OriginalRoot) const;
 
 	TSharedPtr<SMultiLineEditableTextBox> SecondaryAssetsBox;
+
+	TSharedPtr<SMultiLineEditableTextBox> ErrorMessageBox;
 
 	FText GetSecondaryAssetList() const;
 
@@ -100,6 +105,16 @@ class VAULT_API SPublisherWindow : public SCompoundWidget
 	FText GetAuthorName() const;
 	FText CurrentAuthorName;
 	void OnAuthorNameTextCommitted(const FText& InText, ETextCommit::Type InCommitType);
+
+	FText GetErrorMessage() const;
+	EVisibility GetErrorMessageVisibility() const;
+	FSlateColor GetSubmitButtonColor() const;
+
+
+	void CheckDependencies();
+	int32 AssetHierarchyBadness;
+	TSet<FName> Dependencies;
+	TSet<FName> BadDependencies;
 
 };
 

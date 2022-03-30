@@ -12,10 +12,18 @@
 #include "SPublisherWindow.h"
 #include "AssetPublisher.h"
 #include "LevelEditor.h"
+#include "VaultConnection.h"
+
+#include "HAL/PlatformProcess.h"
+#include "Misc/Paths.h"
+#include "Interfaces/IPluginManager.h"
+#include "ContentBrowserModule.h"
 
 static const FName VaultTabName("VaultOperations");
 static const FName VaultPublisherName("VaultPublisher");
 static const FName VaultLoaderName("VaultLoader");
+
+void* FVaultModule::LibHandle = nullptr;
 
 #define LOCTEXT_NAMESPACE "FVaultModule"
 DEFINE_LOG_CATEGORY(LogVault);
@@ -33,6 +41,7 @@ public:
 
 	virtual void RegisterCommands() override;
 	TSharedPtr< FUICommandInfo > PluginAction;
+	TSharedPtr<FUICommandInfo> VaultExportAsset;
 };
 
 
@@ -40,13 +49,32 @@ public:
 void FVaultCommands::RegisterCommands()
 {
 	UI_COMMAND(PluginAction, "Vault", "Open the Vault", EUserInterfaceActionType::Button, FInputGesture());
+	UI_COMMAND(VaultExportAsset, "Export to Vault", "Open the Vault user interface to export the selected asset to the vault.", EUserInterfaceActionType::Button, FInputChord());
 }
 
 
 void FVaultModule::StartupModule()
 {
+	// determine directory paths
+	const FString BaseDir = IPluginManager::Get().FindPlugin("Vault")->GetBaseDir();
+	const FString libsshDir = FPaths::Combine(*BaseDir, TEXT("Source"), TEXT("ThirdParty"), TEXT("libssh"));
+#if PLATFORM_WINDOWS
+	#if PLATFORM_64BITS
+	const FString LibDir = FPaths::Combine(*libsshDir, TEXT("Win64"), TEXT("bin"));
+	#else
+	const FString LibDir = FPaths::Combine(*libsshDir, TEXT("Win32"), TEXT("bin"));
+	#endif
+#endif
+
+	// load libssh library
+	LoadDependency(LibDir, TEXT("ssh"), LibHandle);
+
+
+
 	// Init our styles
 	FVaultStyle::Initialize();
+
+	FVaultStyle::CacheThumbnailsLocally();
 
 	// Reload Textures
 	FVaultStyle::ReloadTextures();
@@ -79,6 +107,12 @@ void FVaultModule::StartupModule()
 		LevelEditorModule.GetToolBarExtensibilityManager()->AddExtender(ToolbarExtender);
 	}
 
+	// TODO: Add content browser right click action
+	//FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>(TEXT("ContentBrowser"));
+	//TArray<FContentBrowserMenuExtender_SelectedPaths>& MenuExtenderDelegates = ContentBrowserModule.GetAllPathViewContextMenuExtenders();
+	//// Create new delegate that will be called to provide our menu extener
+	//MenuExtenderDelegates.Add(FContentBrowserMenuExtender_SelectedPaths::CreateRaw(this, &FVaultModule::AssetMenuExtender));
+
 	// Setup Operations Tab
 	const FText VaultBasePanelWindowTitle = LOCTEXT("OperationsWindowTitleLabel", "The Vault");
 	const FText VaultBasePanelWindowTooltip = LOCTEXT("VaultWindowTooltipLabel", "Vault Operations");
@@ -99,10 +133,14 @@ void FVaultModule::ShutdownModule()
 	FVaultCommands::Unregister();
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 	TabManager->UnregisterTabSpawner(VaultTabName);
+
+	FreeDependency(LibHandle);
 }
 
 void FVaultModule::SpawnOperationsTab()
 {
+	//VaultConnection::Get().Initialize();
+	FVaultStyle::CacheThumbnailsLocally();
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 	TabManager->InvokeTab(VaultTabName);
 }
@@ -133,11 +171,56 @@ TSharedRef<SDockTab> FVaultModule::CreateVaultMajorTab(const FSpawnTabArgs& TabS
 	return SpawnedTab;
 }
 
+void FVaultModule::FreeDependency(void*& Handle)
+{
+	if (Handle != nullptr)
+	{
+		FPlatformProcess::FreeDllHandle(Handle);
+		Handle = nullptr;
+	}
+}
+
+bool FVaultModule::LoadDependency(const FString& Dir, const FString& Name, void*& Handle)
+{
+	FString Lib = Name + TEXT(".") + FPlatformProcess::GetModuleExtension();
+	FString Path = Dir.IsEmpty() ? *Lib : FPaths::Combine(*Dir, *Lib);
+
+	if (FPaths::FileExists(*Path))
+	{
+		UE_LOG(LogVault, Log, TEXT("%s exists"), *Name);
+	}
+
+	//FPlatformProcess::PushDllDirectory(*Dir);
+
+	Handle = FPlatformProcess::GetDllHandle(*Path);
+
+	if (Handle == nullptr)
+	{
+		UE_LOG(LogVault, Warning, TEXT("Failed to load required library %s. Plug-in will not be functional."), *Lib);
+		return false;
+	}
+	return true;
+}
+
 
 void FVaultModule::AddToolbarExtension(FToolBarBuilder& Builder)
 {
 	Builder.AddToolBarButton(FVaultCommands::Get().PluginAction);
 }
+
+//TSharedRef<FExtender> FVaultModule::AssetMenuExtender(const TArray<FString>& Path)
+//{
+//	// Extension variable contains a copy of selected paths array, you must keep Extension somewhere to prevent it from being deleted/garbage collected!
+//	Extension = MakeShareable(new FContentBrowserMenuExtension(Path));
+//	// Create extender that contains a delegate that will be called to get information about new context menu items
+//	TSharedPtr<FExtender> MenuExtender = MakeShareable(new FExtender());
+//	// Create a Shared-pointer delegate that keeps a weak reference to object
+//	// "NewFolder" is a hook name that is used by extender to identify externders that will extend path context menu
+//	MenuExtender->AddMenuExtension("NewFolder", EExtensionHook::After, TSharedPtr<FUICommandList>(),
+//		FMenuExtensionDelegate::CreateSP(Extension.ToSharedRef(),
+//			&FContentBrowserMenuExtension::AddMenuEntry));
+//	return MenuExtender.ToSharedRef();
+//}
 
 #undef LOCTEXT_NAMESPACE
 	

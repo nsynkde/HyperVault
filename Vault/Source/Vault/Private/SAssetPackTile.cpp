@@ -31,7 +31,7 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 	AssetItem = InArgs._AssetItem;
 
 	TSharedRef<SWidget> ThumbnailWidget = CreateTileThumbnail(AssetItem);
-	
+		
 	// Clear Old
 	this->ChildSlot [ SNullWidget::NullWidget ];
 	
@@ -87,7 +87,7 @@ END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 
 TSharedRef<SWidget> SAssetTileItem::CreateTileThumbnail(TSharedPtr<FVaultMetadata> Meta)
 {
-	const FString Root = FVaultSettings::Get().GetAssetLibraryRoot();
+	const FString Root = FVaultSettings::Get().GetThumbnailCacheRoot();
 	const FString Pack = Meta->PackName.ToString();
 	const FString Filepath = Root / Pack + TEXT(".png");
 

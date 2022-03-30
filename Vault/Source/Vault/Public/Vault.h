@@ -32,6 +32,7 @@ public:
 private:
 
 	void AddToolbarExtension(FToolBarBuilder& Builder);
+	TSharedRef<FExtender> AssetMenuExtender(const TArray<FString>& Path);
 	void AddMenuExtension(FMenuBuilder& Builder);
 
 	TSharedRef<SDockTab> CreateVaultMajorTab(const FSpawnTabArgs& TabSpawnArgs);
@@ -39,4 +40,10 @@ private:
 	TSharedPtr<class FUICommandList> PluginCommands;
 
 	UAssetPublisher* AssetPublisherInstance;
+
+	static void* LibHandle;
+
+protected:
+	static void FreeDependency(void*& Handle);
+	static bool LoadDependency(const FString& Dir, const FString& Name, void*& Handle);
 };

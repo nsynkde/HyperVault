@@ -140,6 +140,9 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 	// Bound to Static delegate in Asset Publisher, so we can update when user pushes a new asset
 	void OnNewAssetPublished();
 
+private:
+	int32 LastSearchTextLength;
+
 public:
 
 	void ModifyActiveTagFilters(FString TagModified, bool bFilterThis);

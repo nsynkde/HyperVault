@@ -20,6 +20,7 @@ class VAULT_API SSettingsWindow : public SCompoundWidget
 
 	//~SSettingsWindow();
 	
+	FReply OpenLocalSettingsFile();
 
 
 };

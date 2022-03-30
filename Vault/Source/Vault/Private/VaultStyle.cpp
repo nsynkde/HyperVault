@@ -6,6 +6,10 @@
 #include "Styling/SlateStyleRegistry.h"
 #include "Slate/SlateGameResources.h"
 #include "Interfaces/IPluginManager.h"
+#include "GenericPlatform/GenericPlatformFile.h"
+#include "VaultSettings.h"
+
+#define LOCTEXT_NAMESPACE "FVaultStyle"
 
 TSharedPtr< FSlateStyleSet > FVaultStyle::StyleInstance = NULL;
 
@@ -406,6 +410,52 @@ TSharedRef< FSlateStyleSet > FVaultStyle::Create()
 #undef TTF_FONT
 #undef OTF_FONT
 #undef DEFAULT_FONT
+
+bool FVaultStyle::CacheThumbnailsLocally()
+{
+	TArray<FString> ThumbnailFilesRemote;
+	TArray<FString> ThumbnailFilesCached;
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+	if (!PlatformFile.DirectoryExists(*FVaultSettings::Get().GetThumbnailCacheRoot()))
+	{
+		PlatformFile.CreateDirectory(*FVaultSettings::Get().GetThumbnailCacheRoot());
+	}
+
+	PlatformFile.FindFiles(ThumbnailFilesRemote, *FVaultSettings::Get().GetAssetLibraryRoot(), L".png");
+	PlatformFile.FindFiles(ThumbnailFilesCached, *FVaultSettings::Get().GetThumbnailCacheRoot(), L".png");
+
+	FScopedSlowTask CacheThumbnailsTask(ThumbnailFilesRemote.Num(), LOCTEXT("CacheThumbnailsText", "Caching package thumbnails locally."));
+
+	for (FString ThumbnailFile : ThumbnailFilesRemote)
+	{
+		FString Filename = FPaths::GetCleanFilename(ThumbnailFile);
+		if (ThumbnailFilesCached.Contains(FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename)))
+		{
+			if (PlatformFile.GetTimeStamp(*ThumbnailFile) > PlatformFile.GetTimeStamp(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename)))
+			{
+				PlatformFile.CopyFile(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename), *ThumbnailFile);
+			}
+		} 
+		else
+		{
+			PlatformFile.CopyFile(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename), *ThumbnailFile);
+		}
+		CacheThumbnailsTask.EnterProgressFrame();
+	}
+
+	for (FString ThumbnailCacheFile : ThumbnailFilesCached) {
+
+		FString Filename = FPaths::GetCleanFilename(ThumbnailCacheFile);
+		if (!ThumbnailFilesRemote.Contains(FPaths::Combine(FVaultSettings::Get().GetAssetLibraryRoot(), Filename)))
+		{
+			PlatformFile.DeleteFile(*ThumbnailCacheFile);
+		}
+	}
+
+
+	return false;
+}
 
 void FVaultStyle::ReloadTextures()
 {

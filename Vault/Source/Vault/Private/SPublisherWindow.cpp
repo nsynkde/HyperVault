@@ -24,8 +24,10 @@
 #include "Interfaces/IPluginManager.h"
 #include "LevelEditorViewport.h" // Enabling GameView for Thumbnail Gen
 #include "VaultStyle.h"
+#include "ObjectTools.h"
 
 #define LOCTEXT_NAMESPACE "FVaultPublisher"
+
 #define VAULT_PUBLISHER_CAPTURE_SIZE 512
 #define VAULT_PUBLISHER_THUMBNAIL_SIZE 256
 
@@ -91,6 +93,8 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 	// Pre-Fill in the author name from the Local Settings
 	
 	CurrentAuthorName = FVaultSettings::Get().GetDefaultDeveloperName();
+
+	AssetHierarchyBadness = 0;
 
 
 	// Attempt to Show the map in the dropdown by default, but not solved yet.
@@ -256,6 +260,25 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 			.Padding(FMargin(0, 5, 0, 0))
 			[
 				SAssignNew(TagsWidget, SPublisherTagsWidget)
+			]
+
+		+ SVerticalBox::Slot()
+			.AutoHeight()
+			.Padding(FMargin(0, 10.f, 0, 0))
+			[
+				SNew(SBox)
+				.MinDesiredHeight(30.f)
+				.MaxDesiredHeight(120.f)
+				[
+					SAssignNew(ErrorMessageBox, SMultiLineEditableTextBox)
+					.IsReadOnly(true)
+					.AllowMultiLine(true)
+					.AlwaysShowScrollbars(false)
+					//.BackgroundColor(FLinearColor::Black)
+					.Style(FEditorStyle::Get(), "Log.TextBox")
+					.Text(this, &SPublisherWindow::GetErrorMessage)
+					.Visibility(this, &SPublisherWindow::GetErrorMessageVisibility)
+				]
 			]
 
 		+ SVerticalBox::Slot()
@@ -614,6 +637,13 @@ UTexture2D* SPublisherWindow::CreateThumbnailFromFile()
 	return OriginalTexture;
 }
 
+//UTexture2D* SPublisherWindow::CreateThumbnailFromAsset()
+//{
+//	ThumbnailTools::RenderThumbnail(CurrentlySelectedAsset.GetAsset(), VAULT_PUBLISHER_CAPTURE_SIZE, VAULT_PUBLISHER_CAPTURE_SIZE, ThumbnailTools::)
+//
+//	return OriginalTexture;
+//}
+
 FReply SPublisherWindow::TryPackage()
 {
 	OutputLogExpandableBox->SetExpanded(true);
@@ -624,6 +654,132 @@ FReply SPublisherWindow::TryPackage()
 		return FReply::Handled();
 	}
 	
+#pragma region OldPackageLogic (now in AssetPublisher.cpp)
+	//const FString OutputDirectory = FVaultSettings::Get().GetAssetLibraryRoot();
+	//const FString ScreenshotPath = OutputDirectory / PackageNameInput->GetText().ToString() + TEXT(".png");
+
+	//// Pack file path, only used here for duplicate detection
+	//const FString PackageFileOutput = OutputDirectory / PackageNameInput->GetText().ToString() + TEXT(".upack");
+
+	//FImageWriteOptions Params;
+	//Params.bAsync = true;
+	//Params.bOverwriteFile = true;
+	//Params.CompressionQuality = 90;
+	//Params.Format = EDesiredImageFormat::PNG;
+
+	//if (FPaths::FileExists(PackageFileOutput))
+	//{
+
+	//	const FText ErrorMsg = LOCTEXT("TryPackageOverwriteMsg", "A Vault item already exists with this pack name, are you sure you want to overwrite it?\nThis action cannot be undone.");
+	//	const FText ErrorTitle = LOCTEXT("TryPackageOverwriteTitle", "Existing Pack Detected");
+
+	//	const EAppReturnType::Type Confirmation = FMessageDialog::Open(
+	//		EAppMsgType::OkCancel, ErrorMsg, &ErrorTitle);
+
+	//	if (Confirmation == EAppReturnType::Cancel)
+	//	{
+	//		UE_LOG(LogVault, Error, TEXT("User cancelled packaging operation due to duplicate pack found"));
+	//		return FReply::Handled();;
+	//	}
+	//}
+
+	//UImageWriteBlueprintLibrary::ExportToDisk(ShotTexture, ScreenshotPath, Params);
+
+	//// Store PackageName
+	//const FName AssetPath = CurrentlySelectedAsset.PackageName;
+
+	//// Our core publish list, which gets written as a text file to be passed to the Pak Tool.
+	//TSet<FString> PublishList;
+
+	//// List of objects that are getting packaged, clean, for writing to the JSON.
+	//TSet<FString> ObjectsInPackage;
+
+	//FString RootPath = AssetPath.ToString();
+	//FString OrigionalRootString;
+	//RootPath.RemoveFromStart(TEXT("/"));
+	//RootPath.Split("/", &OrigionalRootString, &RootPath, ESearchCase::IgnoreCase, ESearchDir::FromStart);
+	//OrigionalRootString = TEXT("/") + OrigionalRootString;
+
+	//TSet<FName> AssetsToProcess = { AssetPath };
+	//GetAssetDependanciesRecursive(CurrentlySelectedAsset.PackageName, AssetsToProcess, OrigionalRootString);
+
+
+	//// Loop through all Assets, including the root object, and format into the correct absolute system filename for the UnrealPak operation
+	//for (const FName Path : AssetsToProcess)
+	//{
+	//	const FString PathString = Path.ToString();
+
+	//	UE_LOG(LogVault, Display, TEXT("Processing Object Path: %s"), *PathString);
+
+	//	FString Filename;
+	//	bool bGotFilename = FPackageName::TryConvertLongPackageNameToFilename(PathString, Filename);
+
+	//	// Find the UPackage to determine the asset type
+	//	UPackage* PrimaryAssetPackage = CurrentlySelectedAsset.GetPackage();
+	//	//UPackage* Package = FindPackage(nullptr, *CurrentlySelectedAsset.PackageName.ToString());
+	//	UPackage* ItemPackage = FindPackage(nullptr, *PathString);
+
+	//	if (!PrimaryAssetPackage || !ItemPackage)
+	//	{
+	//		UE_LOG(LogVault, Error, TEXT("Unable to find UPackage for %s"), *CurrentlySelectedAsset.PackageName.ToString());
+	//		continue;
+	//	}
+
+	//	ObjectsInPackage.Add(ItemPackage->FileName.ToString());
+
+	//	// Get and append the asset extension
+	//	const FString ExtensionName = ItemPackage->ContainsMap() ? FPackageName::GetMapPackageExtension() : FPackageName::GetAssetPackageExtension();
+
+	//	// Append extension into filename
+	//	Filename += ExtensionName;
+
+	//	PublishList.Add(Filename);
+	//}
+
+	//// Build a Struct from the metadata to pass to the packager
+	//FVaultMetadata AssetPublishMetadata;
+
+	//AssetPublishMetadata.Author = FName(*AuthorInput->GetText().ToString());
+	//AssetPublishMetadata.PackName = FName(*PackageNameInput->GetText().ToString());
+	//AssetPublishMetadata.Description = DescriptionInput->GetText().ToString();
+	//AssetPublishMetadata.CreationDate = FDateTime::UtcNow();
+	//AssetPublishMetadata.LastModified = FDateTime::UtcNow();
+	//AssetPublishMetadata.Tags = TagsWidget->GetUserSelectedTags();
+	//AssetPublishMetadata.ObjectsInPack = ObjectsInPackage;
+
+	//// Lets see if we want to append any new tags to our global tags library
+	//if (TagsWidget->GetShouldAddNewTagsToLibrary())
+	//{
+	//	FVaultSettings::Get().SaveVaultTags(TagsWidget->GetUserSelectedTags());
+	//}
+
+	//if (UAssetPublisher::PackageSelected(PublishList, AssetPublishMetadata))
+	//{
+	//	FNotificationInfo PackageResultMessage(LOCTEXT("PackageResultToast", "Packaging Successful"));
+	//	PackageResultMessage.ExpireDuration = 5.0f;
+	//	PackageResultMessage.bFireAndForget = true;
+	//	PackageResultMessage.bUseLargeFont = true;
+	//	PackageResultMessage.Image = FCoreStyle::Get().GetBrush(TEXT("NotificationList.SuccessImage"));
+	//	FSlateNotificationManager::Get().AddNotification(PackageResultMessage);
+	//}
+	//return FReply::Handled();
+
+#pragma endregion
+
+	FVaultMetadata AssetPublishMetadata;
+
+	AssetPublishMetadata.Author = FName(*AuthorInput->GetText().ToString());
+	AssetPublishMetadata.PackName = FName(*PackageNameInput->GetText().ToString());
+	AssetPublishMetadata.Description = DescriptionInput->GetText().ToString();
+	AssetPublishMetadata.CreationDate = FDateTime::UtcNow();
+	AssetPublishMetadata.LastModified = FDateTime::UtcNow();
+	AssetPublishMetadata.Tags = TagsWidget->GetUserSelectedTags();
+
+	// Lets see if we want to append any new tags to our global tags library
+	if (TagsWidget->GetShouldAddNewTagsToLibrary())
+	{
+		FVaultSettings::Get().SaveVaultTags(TagsWidget->GetUserSelectedTags());
+	}
 
 	// #todo to abstract UI from functionality, much of this code should be reviewed for splitting
 	// this will be important when it comes to python hooks
@@ -634,9 +790,6 @@ FReply SPublisherWindow::TryPackage()
 
 	const FString OutputDirectory = FVaultSettings::Get().GetAssetLibraryRoot();
 	const FString ScreenshotPath = OutputDirectory / PackageNameInput->GetText().ToString() + TEXT(".png");
-	
-	// Pack file path, only used here for duplicate detection
-	const FString PackageFileOutput = OutputDirectory / PackageNameInput->GetText().ToString() + TEXT(".upack");
 
 	FImageWriteOptions Params;
 	Params.bAsync = true;
@@ -644,102 +797,9 @@ FReply SPublisherWindow::TryPackage()
 	Params.CompressionQuality = 90;
 	Params.Format = EDesiredImageFormat::PNG;
 
-	if (FPaths::FileExists(PackageFileOutput))
-	{
-
-		const FText ErrorMsg = LOCTEXT("TryPackageOverwriteMsg", "A Vault item already exists with this pack name, are you sure you want to overwrite it?\nThis action cannot be undone.");
-		const FText ErrorTitle = LOCTEXT("TryPackageOverwriteTitle", "Existing Pack Detected");
-
-		const EAppReturnType::Type Confirmation = FMessageDialog::Open(
-			EAppMsgType::OkCancel, ErrorMsg, &ErrorTitle);
-
-		if (Confirmation == EAppReturnType::Cancel)
-		{
-			UE_LOG(LogVault, Error, TEXT("User cancelled packaging operation due to duplicate pack found"));
-			return FReply::Handled();;
-		}
-	}
-
 	UImageWriteBlueprintLibrary::ExportToDisk(ShotTexture, ScreenshotPath, Params);
 
-	// Store PackageName
-	const FName AssetPath = CurrentlySelectedAsset.PackageName;
-
-	// Our core publish list, which gets written as a text file to be passed to the Pak Tool.
-	TSet<FString> PublishList;
-	
-	// List of objects that are getting packaged, clean, for writing to the JSON.
-	TSet<FString> ObjectsInPackage;
-
-	FString RootPath = AssetPath.ToString();
-	FString OrigionalRootString;
-	RootPath.RemoveFromStart(TEXT("/"));
-	RootPath.Split("/", &OrigionalRootString, &RootPath, ESearchCase::IgnoreCase, ESearchDir::FromStart);
-	OrigionalRootString = TEXT("/") + OrigionalRootString;
-
-	TSet<FName> AssetsToProcess = { AssetPath };
-	GetAssetDependanciesRecursive(CurrentlySelectedAsset.PackageName, AssetsToProcess, OrigionalRootString);
-
-
-	// Loop through all Assets, including the root object, and format into the correct absolute system filename for the UnrealPak operation
-	for (const FName Path : AssetsToProcess)
-	{
-		const FString PathString = Path.ToString();
-
-		UE_LOG(LogVault, Display, TEXT("Processing Object Path: %s"), *PathString);
-
-		FString Filename;
-		bool bGotFilename = FPackageName::TryConvertLongPackageNameToFilename(PathString, Filename);
-
-		// Find the UPackage to determine the asset type
-		UPackage* PrimaryAssetPackage = CurrentlySelectedAsset.GetPackage();
-		//UPackage* Package = FindPackage(nullptr, *CurrentlySelectedAsset.PackageName.ToString());
-		UPackage* ItemPackage = FindPackage(nullptr, *PathString);
-
-		if (!PrimaryAssetPackage || !ItemPackage)
-		{
-			UE_LOG(LogVault, Error, TEXT("Unable to find UPackage for %s"), *CurrentlySelectedAsset.PackageName.ToString());
-			continue;
-		}
-
-		ObjectsInPackage.Add(ItemPackage->FileName.ToString());
-
-		// Get and append the asset extension
-		const FString ExtensionName = ItemPackage->ContainsMap() ? FPackageName::GetMapPackageExtension() : FPackageName::GetAssetPackageExtension();
-
-		// Append extension into filename
-		Filename += ExtensionName;
-		
-		PublishList.Add(Filename);
-	}
-
-	// Build a Struct from the metadata to pass to the packager
-	FVaultMetadata AssetPublishMetadata;
-
-	AssetPublishMetadata.Author = FName(*AuthorInput->GetText().ToString());
-	AssetPublishMetadata.PackName = FName(*PackageNameInput->GetText().ToString());
-	AssetPublishMetadata.Description = DescriptionInput->GetText().ToString();
-	AssetPublishMetadata.CreationDate = FDateTime::UtcNow();
-	AssetPublishMetadata.LastModified = FDateTime::UtcNow();
-	AssetPublishMetadata.Tags = TagsWidget->GetUserSelectedTags();
-	AssetPublishMetadata.ObjectsInPack = ObjectsInPackage;
-
-	// Lets see if we want to append any new tags to our global tags library
-	if (TagsWidget->GetShouldAddNewTagsToLibrary())
-	{
-		FVaultSettings::Get().SaveVaultTags(TagsWidget->GetUserSelectedTags());
-	}
-
-	if (UAssetPublisher::PackageSelected(PublishList, AssetPublishMetadata))
-	{
-		FNotificationInfo PackageResultMessage(LOCTEXT("PackageResultToast", "Packaging Successful"));
-		PackageResultMessage.ExpireDuration = 5.0f;
-		PackageResultMessage.bFireAndForget = true;
-		PackageResultMessage.bUseLargeFont = true;
-		PackageResultMessage.Image = FCoreStyle::Get().GetBrush(TEXT("NotificationList.SuccessImage"));
-		FSlateNotificationManager::Get().AddNotification(PackageResultMessage);
-	}
-	return FReply::Handled();
+	return UAssetPublisher::TryPackageAsset(PackageNameInput->GetText().ToString(), CurrentlySelectedAsset, AssetPublishMetadata);
 }
 
 void SPublisherWindow::GetAssetDependanciesRecursive(const FName AssetPath, TSet<FName>& AllDependencies, const FString& OriginalRoot) const
@@ -779,26 +839,11 @@ FText SPublisherWindow::GetSecondaryAssetList() const
 {
 	if (CurrentlySelectedAsset.IsValid())
 	{
-		FAssetRegistryModule& AssetRegistryModule = FModuleManager::GetModuleChecked<FAssetRegistryModule>("AssetRegistry");
-
-
-		FString RootPath = CurrentlySelectedAsset.PackageName.ToString();
-		FString OrigionalRootString;
-		RootPath.RemoveFromStart(TEXT("/"));
-		RootPath.Split("/", &OrigionalRootString, &RootPath, ESearchCase::IgnoreCase, ESearchDir::FromStart);
-		OrigionalRootString = TEXT("/") + OrigionalRootString;
-
-
-
-		// Build our list of dependencies
-		TSet<FName> Dependancies = { CurrentlySelectedAsset.PackageName };
-		GetAssetDependanciesRecursive(CurrentlySelectedAsset.PackageName, Dependancies, OrigionalRootString);
-
 		// Dependancies includes original item, so lets remove that
 		//Dependancies.Remove(CurrentlySelectedAsset.PackageName.ToString());
 
 		FString FormattedList;
-		for (FName Dependant : Dependancies)
+		for (FName Dependant : Dependencies)
 		{
 			FString DependantString = Dependant.ToString();
 			DependantString = FPaths::GetCleanFilename(DependantString);
@@ -894,6 +939,9 @@ void SPublisherWindow::OnAssetSelected(const FAssetData& InAssetData)
 {
 	// #todo lambda this for simpler code?
 	CurrentlySelectedAsset = InAssetData;
+
+	// Build our list of dependencies
+	CheckDependencies();
 }
 
 void SPublisherWindow::OnScreenshotMapSelectionChanged(const FAssetData& InAssetData)
@@ -956,6 +1004,70 @@ FText SPublisherWindow::GetAuthorName() const
 void SPublisherWindow::OnAuthorNameTextCommitted(const FText& InText, ETextCommit::Type InCommitType)
 {
 	CurrentAuthorName = InText;
+}
+
+FText SPublisherWindow::GetErrorMessage() const
+{
+	FText ErrorMsg;
+	if (CurrentlySelectedAsset.IsValid() && AssetHierarchyBadness > 0)
+	{
+		FString FormattedList;
+		for (FName Dependant : Dependencies)
+		{
+			FString DependantString = Dependant.ToString();
+			FormattedList += (DependantString);
+			FormattedList += LINE_TERMINATOR;
+		}
+
+		if (AssetHierarchyBadness == 1) 
+		{
+			ErrorMsg = LOCTEXT("NotInVaultFolderText", "The Asset you are trying to export is not in the /Game/Vault folder!");
+		}
+		else if (AssetHierarchyBadness == 2)
+		{
+			ErrorMsg = FText::Format(LOCTEXT("BadAssetsInVaultText", "Not all of the assets dependencies are located in the same subfolder as the current asset! Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(FormattedList));
+		}
+		else if (AssetHierarchyBadness == 3)
+		{
+			ErrorMsg = FText::Format(LOCTEXT("BadAssetsOutsideVaultText", "Your asset isn't inside the vault folder and not all of its dependencies are located in the same subfolder as the current asset! Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(FormattedList));
+		}
+
+		return ErrorMsg;
+	}
+	return FText();
+}
+
+EVisibility SPublisherWindow::GetErrorMessageVisibility() const
+{
+	if (AssetHierarchyBadness == 0)
+	{
+		return EVisibility::Collapsed;
+	}
+	else
+	{
+		return EVisibility::Visible;
+	}
+}
+
+FSlateColor SPublisherWindow::GetSubmitButtonColor() const
+{
+	if (AssetHierarchyBadness == 0)
+	{
+		return FSlateColor(FLinearColor::FromSRGBColor(FColor::FromHex("52A852FF")));
+	}
+	else if (AssetHierarchyBadness > 0 && AssetHierarchyBadness < 3)
+	{
+		return FSlateColor(FLinearColor::FromSRGBColor(FColor::FromHex("DA9E45FF")));
+	}
+	else
+	{
+		return FSlateColor(FLinearColor::FromSRGBColor(FColor::FromHex("C64945FF")));
+	}
+}
+
+void SPublisherWindow::CheckDependencies()
+{
+	AssetHierarchyBadness = UAssetPublisher::CheckForGoodAssetHierarchy(CurrentlySelectedAsset, Dependencies, BadDependencies);
 }
 
 #undef LOCTEXT_NAMESPACE

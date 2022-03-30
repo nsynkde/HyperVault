@@ -33,6 +33,8 @@ public:
 	// Get our Asset Library root path, defined in the global settings. 
 	FString GetAssetLibraryRoot();
 
+	FString GetThumbnailCacheRoot();
+
 	// Json Reusable Functions
 	FString GetGlobalSettingsFilePathFull();
 
@@ -42,6 +44,7 @@ public:
 	static const FString DefaultVaultSettingsFolder;
 	static const FString DefaultGlobalsPath;
 	static const FString LocalSettingsFilePathFull;
+	static const FString DefaultThumbnailCacheFolder;
 
 private:
 

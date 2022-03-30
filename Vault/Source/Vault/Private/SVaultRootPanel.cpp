@@ -30,7 +30,7 @@ void SVaultRootPanel::Construct(const FArguments& InArgs, const TSharedRef<SDock
 			FTabManager::NewStack()
 			->AddTab(AssetBrowserTabId, ETabState::OpenedTab)
 			->AddTab(AssetPublisherTabId, ETabState::OpenedTab)
-			->AddTab(BatchPublisherTabId, ETabState::OpenedTab)
+			//->AddTab(BatchPublisherTabId, ETabState::OpenedTab)
 			->AddTab(VaultSettingsTabId, ETabState::OpenedTab)
 			->SetHideTabWell(false)
 			->SetSizeCoefficient(0.75f)

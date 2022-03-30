@@ -13,6 +13,8 @@ public:
 
 	static void Shutdown();
 
+	static bool CacheThumbnailsLocally();
+
 	/** reloads textures used by slate renderer */
 	static void ReloadTextures();
 

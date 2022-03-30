@@ -13,8 +13,8 @@
 
 // Folder Names - These 2 vars registered in header for access elsewhere.
 const FString FVaultSettings::DefaultVaultSettingsFolder("Vault");
-const FString FVaultSettings::DefaultGlobalsPath(FPlatformProcess::UserDir() + DefaultVaultSettingsFolder);
-
+//const FString FVaultSettings::DefaultGlobalsPath(FPlatformProcess::UserDir() + DefaultVaultSettingsFolder);
+const FString FVaultSettings::DefaultGlobalsPath("V:/" + DefaultVaultSettingsFolder);
 
 // Filenames
 static const FString GlobalSettingsFilename = "VaultGlobalSettings.json";
@@ -22,7 +22,7 @@ static const FString GlobalTagPoolFilename = "VaultTags.json";
 static const FString LocalSettingsFilename = "VaultLocalSettings.json";
 
 // File Paths - static const FString DefaultGlobalsPath = FPlatformProcess::UserDir() + DefaultVaultSettingsFolder;
-static const FString DefaultGlobalTagsPath = FPlatformProcess::UserDir() + FVaultSettings::DefaultVaultSettingsFolder;
+static const FString DefaultGlobalTagsPath = "V:/" + FVaultSettings::DefaultVaultSettingsFolder;
 static const FString VaultPluginRoot = IPluginManager::Get().FindPlugin(TEXT("Vault"))->GetBaseDir();
 //static const FString LocalSettingsFilePathFull = VaultPluginRoot / LocalSettingsFilename;
 static const FString GlobalSettingsFilePathFull = FVaultSettings::DefaultGlobalsPath / GlobalSettingsFilename;
@@ -35,8 +35,13 @@ static const FString GlobalTagsPoolPathKey = "GlobalTagsPoolPath";
 static const FString VaultVersionKey = "Version";
 static const FString LibraryPath = "LibraryPath";
 static const FString DeveloperNameKey = "DeveloperName";
+static const FString ThumbnailCachePath = "ThumbnailCachePath";
 
-const FString FVaultSettings::LocalSettingsFilePathFull(VaultPluginRoot / LocalSettingsFilename);
+static const bool UseInternalSshConnection = false;
+
+const FString FVaultSettings::LocalSettingsFilePathFull(FPaths::Combine(FPlatformProcess::UserDir(), DefaultVaultSettingsFolder, LocalSettingsFilename));
+
+const FString FVaultSettings::DefaultThumbnailCacheFolder(FPaths::Combine(FPlatformProcess::UserDir(), DefaultVaultSettingsFolder, L"ThumbnailCache"));
 
 // Random Extra Statics
 static const FString DefaultDeveloperName = FString(FPlatformProcess::UserName());
@@ -139,6 +144,16 @@ FString FVaultSettings::GetAssetLibraryRoot()
 	return FString();
 }
 
+FString FVaultSettings::GetThumbnailCacheRoot()
+{
+	TSharedPtr<FJsonObject> SettingsObj = GetVaultLocalSettings();
+	if (SettingsObj.IsValid())
+	{
+		return SettingsObj->GetStringField(ThumbnailCachePath);
+	}
+	return FString();
+}
+
 // Write any Json file out to a file.
 bool FVaultSettings::WriteJsonObjectToFile(TSharedPtr<FJsonObject> JsonFile, FString FilepathFull)
 {
@@ -158,6 +173,7 @@ void FVaultSettings::GenerateBaseLocalSettingsFile()
 	JsonLocalSettings->SetStringField(GlobalTagsPoolPathKey, (DefaultGlobalTagsPath / GlobalTagPoolFilename));
 	JsonLocalSettings->SetBoolField(TEXT("ClearPackageListOnSuccessfulPackage"), false);
 	JsonLocalSettings->SetStringField(DeveloperNameKey, DefaultDeveloperName);
+	JsonLocalSettings->SetStringField(ThumbnailCachePath, DefaultThumbnailCacheFolder);
 
 	// We grab the System TEMP Env path here so we can have a safe directory to dump logs too.
 	FString TempPath = FPlatformMisc::GetEnvironmentVariable(TEXT("TEMP"));

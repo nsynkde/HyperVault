@@ -16,6 +16,7 @@
 #include "EditorFramework/AssetImportData.h"
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"
+#include <AssetRegistryModule.h>
 
 
 #define LOCTEXT_NAMESPACE "SVaultLoader"
@@ -154,6 +155,8 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 	PopulateTagArray();
 	PopulateDeveloperNameArray();
 
+	LastSearchTextLength = 0;
+
 	// Bind to our publisher so we can refresh automatically when the user publishes an asset (they wont need to import it, but its a visual feedback for the user to check it appeared in the library
 	UAssetPublisher::OnVaultPackagingCompletedDelegate.BindRaw(this, &SLoaderWindow::OnNewAssetPublished);
 	
@@ -249,7 +252,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.FixedWidth(40.0f)
 
 								+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
-								.DefaultLabel(LOCTEXT("TagFilteringTagNameLabel", "Tags"))
+								.DefaultLabel(LOCTEXT("TagFilteringTagNameLabel", "Developer"))
 
 								+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
 								.DefaultLabel(LOCTEXT("TagFilteringCounterLabel", "Used"))
@@ -401,13 +404,16 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.TextStyle(FVaultStyle::Get(), "MetaTitleText")
 					
 							]
-
 							+ SVerticalBox::Slot()
 							.FillHeight(1)
 							[
-								SNew(SBox)
+								SNew(SScrollBox)
+								+ SScrollBox::Slot()
 								[
-									MetadataWidget.ToSharedRef()
+									SNew(SBox)
+									[
+										MetadataWidget.ToSharedRef()
+									]
 								]
 							]
 						]
@@ -584,8 +590,52 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 				FGetActionCheckState(),
 				FIsActionButtonVisible()));
 
+		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_UpdateVaultAssetLabel", "Update Asset"), FText::GetEmpty(), FSlateIcon(),
+			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
+				{
+					// Republish asset with same data to update it
 
-		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_EditVaultAssetDetailsLabel", "Edit Asset"), FText::GetEmpty(), FSlateIcon(),
+					if (SelectedAsset->IsMetaValid())
+					{
+						FVaultMetadata AssetPublishMetadata;
+
+						AssetPublishMetadata.Author = SelectedAsset->Author;
+						AssetPublishMetadata.PackName = SelectedAsset->PackName;
+						AssetPublishMetadata.Description = SelectedAsset->Description;
+						AssetPublishMetadata.CreationDate = SelectedAsset->CreationDate;
+						AssetPublishMetadata.LastModified = FDateTime::UtcNow();
+						AssetPublishMetadata.Tags = SelectedAsset->Tags;
+
+						FString ObjectPath = *(SelectedAsset->ObjectsInPack.begin());
+						TArray<FString> temp;
+						ObjectPath.ParseIntoArray(temp, FGenericPlatformMisc::GetDefaultPathSeparator(), true);
+						ObjectPath = ObjectPath + "." + temp.Last();
+
+						FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+						FAssetData AssetData = AssetRegistryModule.Get().GetAssetByObjectPath(FName(ObjectPath), true);
+						
+						if (AssetData.IsValid())
+						{
+							UAssetPublisher::TryPackageAsset(SelectedAsset->PackName.ToString(), AssetData, AssetPublishMetadata);
+						}
+						else
+						{
+							const FText ErrorMsg = LOCTEXT("UpdateAssetNotExistMessage", "The base asset of the package you are trying to update does not exist in this project!");
+							const FText ErrorTitle = LOCTEXT("UpdateAssetNotExistTitle", "Asset Does Not Exist");
+
+							const EAppReturnType::Type ErrorDialog = FMessageDialog::Open(
+								EAppMsgType::Ok, ErrorMsg, &ErrorTitle);
+						}
+					}
+
+					
+
+				}),
+				FCanExecuteAction(),
+					FGetActionCheckState(),
+					FIsActionButtonVisible()));
+
+		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_EditVaultAssetDetailsLabel", "Edit Asset Metadata"), FText::GetEmpty(), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
 				{
 					const FString LibraryPath = FVaultSettings::Get().GetAssetLibraryRoot();
@@ -632,6 +682,12 @@ void SLoaderWindow::OnSearchBoxChanged(const FText& inSearchText)
 		UpdateFilteredAssets();
 		return;
 	}
+	if (inSearchText.ToString().Len() < LastSearchTextLength)
+	{
+		UpdateFilteredAssets();
+	}
+
+	LastSearchTextLength = inSearchText.ToString().Len();
 
 	// Store Strict Search - This controls if we only search pack name, or various data entries.
 	const bool bStrictSearch = StrictSearchCheckBox->GetCheckedState() == ECheckBoxState::Checked;
@@ -655,6 +711,14 @@ void SLoaderWindow::OnSearchBoxChanged(const FText& inSearchText)
 			if (Meta->Author.ToString().Contains(SearchString) || Meta->Description.Contains(SearchString))
 			{
 				SearchMatchingEntries.Add(Meta);
+				continue;
+			}
+			for (FString tag : Meta->Tags)
+			{
+				if (tag.Contains(SearchString)) {
+					SearchMatchingEntries.Add(Meta);
+					break;
+				}
 			}
 		}
 	}
@@ -837,6 +901,7 @@ void SLoaderWindow::DeleteAssetPack(TSharedPtr<FVaultMetadata> InPack)
 void SLoaderWindow::RefreshAvailableFiles()
 {
 	MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
+	FVaultStyle::CacheThumbnailsLocally();
 }
 
 // Applies the List of filters all together.

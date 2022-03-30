@@ -1,6 +1,8 @@
 // Copyright 1998-2018 Epic Games, Inc. All Rights Reserved.
 
 using UnrealBuildTool;
+using System;
+using System.IO;
 
 public class Vault : ModuleRules
 {
@@ -10,14 +12,14 @@ public class Vault : ModuleRules
 		ShadowVariableWarningLevel = WarningLevel.Error; // Treats shadowed variable warnings as errors. (Previously: WarningLevel.Warning).
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
 				"CoreUObject",
 				"Engine",
-				"UnrealEd"
+				"UnrealEd",
+				"libssh"
 			});
 			
 		
