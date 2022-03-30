@@ -1,6 +1,6 @@
 # HyperVault
 
-[![DiscordLink](https://img.shields.io/discord/376875675505655808.svg?logo=discord)](https://discord.gg/RRYwhb) ![UnrealVersion](https://img.shields.io/badge/Unreal%20Engine-4.25.4-brightgreen) ![PluginVersion)](https://img.shields.io/badge/Version-v0.3-brightgreen.svg)
+![UnrealVersion](https://img.shields.io/badge/Unreal%20Engine-4.27.2-brightgreen) ![PluginVersion)](https://img.shields.io/badge/Version-v0.3.1-brightgreen.svg)
 
 Forked from [https://github.com/Unreal-Vault/Vault-Dev](https://github.com/Unreal-Vault/Vault-Dev). Customized by [NSYNK](https://github.com/nsynkde).
 
