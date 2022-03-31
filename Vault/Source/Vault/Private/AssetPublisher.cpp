@@ -318,4 +318,15 @@ FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAs
 	return FReply::Handled();
 }
 
+void UAssetPublisher::ConvertImageBufferUInt8ToFColor(TArray<uint8>& inputData, TArray<FColor>& outputData)
+{
+	outputData.Empty();
+	for (int i = 0; i < (inputData.Num()/4); i++)
+	{
+		int index = i * 4;
+		FColor newColor = FColor(inputData[index + 2], inputData[index + 1], inputData[index], inputData[index + 3]);
+		outputData.Add(newColor);
+	}
+}
+
 

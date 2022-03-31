@@ -266,19 +266,61 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 			.AutoHeight()
 			.Padding(FMargin(0, 10.f, 0, 0))
 			[
-				SNew(SBox)
-				.MinDesiredHeight(30.f)
-				.MaxDesiredHeight(120.f)
-				[
-					SAssignNew(ErrorMessageBox, SMultiLineEditableTextBox)
-					.IsReadOnly(true)
-					.AllowMultiLine(true)
-					.AlwaysShowScrollbars(false)
-					//.BackgroundColor(FLinearColor::Black)
-					.Style(FEditorStyle::Get(), "Log.TextBox")
-					.Text(this, &SPublisherWindow::GetErrorMessage)
-					.Visibility(this, &SPublisherWindow::GetErrorMessageVisibility)
-				]
+				SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot()
+					.AutoWidth()
+					.Padding(FMargin(0,0,3,0))
+					[
+						SNew(STextBlock)
+						.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
+						.Text_Lambda([this]
+							{
+								if (AssetHierarchyBadness == 0)
+								{
+									return FEditorFontGlyphs::Check_Circle;
+								}
+								else if (AssetHierarchyBadness > 0 && AssetHierarchyBadness < 3)
+								{
+									return FEditorFontGlyphs::Exclamation_Circle;
+								}
+								else
+								{
+									return FEditorFontGlyphs::Times_Circle;
+								}
+							})
+						.ColorAndOpacity_Lambda([this]
+							{
+								if (AssetHierarchyBadness == 0)
+								{
+									return FLinearColor::Green;
+								}
+								else if (AssetHierarchyBadness > 0 && AssetHierarchyBadness < 3)
+								{
+									return FLinearColor::Yellow;
+								}
+								else
+								{
+									return FLinearColor::Red;
+								}
+							})
+					]
+				+ SHorizontalBox::Slot()
+					[
+					SNew(SBox)
+						.MinDesiredHeight(30.f)
+						.MaxDesiredHeight(120.f)
+						[
+						SAssignNew(ErrorMessageBox, SMultiLineEditableTextBox)
+							.IsReadOnly(true)
+							.AllowMultiLine(true)
+							.AlwaysShowScrollbars(false)
+							//.BackgroundColor(FLinearColor::Black)
+							.Style(FEditorStyle::Get(), "Log.TextBox")
+							.Text(this, &SPublisherWindow::GetErrorMessage)
+							.Visibility(this, &SPublisherWindow::GetErrorMessageVisibility)
+						]
+					]
+				
 			]
 
 		+ SVerticalBox::Slot()
@@ -637,12 +679,28 @@ UTexture2D* SPublisherWindow::CreateThumbnailFromFile()
 	return OriginalTexture;
 }
 
-//UTexture2D* SPublisherWindow::CreateThumbnailFromAsset()
-//{
-//	ThumbnailTools::RenderThumbnail(CurrentlySelectedAsset.GetAsset(), VAULT_PUBLISHER_CAPTURE_SIZE, VAULT_PUBLISHER_CAPTURE_SIZE, ThumbnailTools::)
-//
-//	return OriginalTexture;
-//}
+UTexture2D* SPublisherWindow::CreateThumbnailFromAsset()
+{
+	FObjectThumbnail ObjectThumbnail;
+	ThumbnailTools::RenderThumbnail(CurrentlySelectedAsset.GetAsset(), VAULT_PUBLISHER_CAPTURE_SIZE, VAULT_PUBLISHER_CAPTURE_SIZE, ThumbnailTools::EThumbnailTextureFlushMode::NeverFlush, NULL, &ObjectThumbnail);
+	//ObjectThumbnail = ThumbnailTools::GetThumbnailForObject(CurrentlySelectedAsset.GetAsset());
+
+	TArray<uint8> thumbnailRawData = ObjectThumbnail.GetUncompressedImageData();
+	TArray<FColor> thumbnailOrigBitmap;
+
+	UAssetPublisher::ConvertImageBufferUInt8ToFColor(thumbnailRawData, thumbnailOrigBitmap);
+
+	TArray<FColor> thumbnailScaledBitmap;
+	FImageUtils::CropAndScaleImage(ObjectThumbnail.GetImageWidth(), ObjectThumbnail.GetImageHeight(), VAULT_PUBLISHER_CAPTURE_SIZE, VAULT_PUBLISHER_CAPTURE_SIZE, thumbnailOrigBitmap, thumbnailScaledBitmap);
+
+	FCreateTexture2DParameters Params;
+	Params.bDeferCompression = true;
+	Params.CompressionSettings = TC_Default;
+	Params.bSRGB = true;
+	UTexture2D* OriginalTexture = FImageUtils::CreateTexture2D(VAULT_PUBLISHER_CAPTURE_SIZE, VAULT_PUBLISHER_CAPTURE_SIZE, thumbnailScaledBitmap, GetTransientPackage(), FString(), RF_NoFlags, Params);
+
+	return OriginalTexture;
+}
 
 FReply SPublisherWindow::TryPackage()
 {
@@ -942,6 +1000,17 @@ void SPublisherWindow::OnAssetSelected(const FAssetData& InAssetData)
 
 	// Build our list of dependencies
 	CheckDependencies();
+
+	ShotTexture = CreateThumbnailFromAsset();
+	FSlateBrush Brush;
+
+	if (ShotTexture)
+	{
+		Brush.SetResourceObject(ShotTexture);
+		Brush.DrawAs = ESlateBrushDrawType::Image;
+		Brush.SetImageSize(FVector2D(VAULT_PUBLISHER_THUMBNAIL_SIZE, VAULT_PUBLISHER_THUMBNAIL_SIZE));
+		ThumbBrush = Brush;
+	}
 }
 
 void SPublisherWindow::OnScreenshotMapSelectionChanged(const FAssetData& InAssetData)

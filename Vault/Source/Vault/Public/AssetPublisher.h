@@ -36,13 +36,13 @@ public:
 	/// <param name="BadAssets">Will contain all the dependencies outside of the first level of folder, or second if within Vault folder</param>
 	/// <returns>returns 0 for good, 1 for not in vault folder but in same subfolder, 2 for in vault folder but not in the same subfolder within it, 3 for neither in vault folder nor in same subfolder</returns>
 	static int32 CheckForGoodAssetHierarchy(const FAssetData AssetData, TSet<FName>& AllDependencies, TSet<FName>& BadAssets);
+
+	static void ConvertImageBufferUInt8ToFColor(TArray<uint8>& inputData, TArray<FColor>& outputData);
 private:
 
 	static void UpdateSystemMeta(FVaultMetadata& Metadata);
 
 	
 };
-
-
 
 
