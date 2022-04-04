@@ -96,7 +96,6 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 
 	AssetHierarchyBadness = 0;
 
-
 	// Attempt to Show the map in the dropdown by default, but not solved yet.
 	//const FString VaultPluginContentPath = IPluginManager::Get().FindPlugin(TEXT("Vault"))->GetContentDir();
 	//const FString DefaultMapPath = VaultPluginContentPath / "PresetMap.umap";
@@ -262,6 +261,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 				SAssignNew(TagsWidget, SPublisherTagsWidget)
 			]
 
+		// asset issues hierarchy
 		+ SVerticalBox::Slot()
 			.AutoHeight()
 			.Padding(FMargin(0, 10.f, 0, 0))
@@ -273,6 +273,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 					[
 						SNew(STextBlock)
 						.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
+						.Visibility(this, &SPublisherWindow::GetErrorMessageVisibility)
 						.Text_Lambda([this]
 							{
 								if (AssetHierarchyBadness == 0)
@@ -336,6 +337,21 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 				.ButtonStyle(FEditorStyle::Get(), "FlatButton.Success")
 				.TextStyle(FEditorStyle::Get(), "NormalText.Important")
 				.ContentPadding(FMargin(10.0, 10.0))
+				.ButtonColorAndOpacity_Lambda([this]
+					{
+						if (AssetHierarchyBadness == 0)
+						{
+							return FLinearColor::Green;
+						}
+						else if (AssetHierarchyBadness > 0 && AssetHierarchyBadness < 3)
+						{
+							return FLinearColor::Yellow;
+						}
+						else
+						{
+							return FLinearColor::Red;
+						}
+					})
 				//.IsEnabled(this, &SPublisherWindow::CanPackage) // dont handle it like this until we sort the disabled style
 			]
 
@@ -500,6 +516,15 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 	[
 		RootWidget
 	];
+
+	FVaultModule::Get().OnAssetForExportChosen.BindLambda([this](FAssetData& AssetToExport)
+		{
+			UE_LOG(LogVault, Log, TEXT("Delegate Binding executing!"));
+			// Checking that the widget is ready by using any accesible widget variable
+			if (ThumbnailWidget.IsValid()) {
+				OpenWithAsset(AssetToExport);
+			}
+		});
 }
 
 SPublisherWindow::~SPublisherWindow()
@@ -1001,6 +1026,8 @@ void SPublisherWindow::OnAssetSelected(const FAssetData& InAssetData)
 	// Build our list of dependencies
 	CheckDependencies();
 
+	PackageNameInput->SetText(FText::FromName(InAssetData.AssetName));
+
 	ShotTexture = CreateThumbnailFromAsset();
 	FSlateBrush Brush;
 
@@ -1092,11 +1119,14 @@ FText SPublisherWindow::GetErrorMessage() const
 		{
 			ErrorMsg = LOCTEXT("NotInVaultFolderText", "The Asset you are trying to export is not in the /Game/Vault folder!");
 		}
-		else if (AssetHierarchyBadness == 2)
-		{
-			ErrorMsg = FText::Format(LOCTEXT("BadAssetsInVaultText", "Not all of the assets dependencies are located in the same subfolder as the current asset! Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(FormattedList));
+		else if (AssetHierarchyBadness == 2) {
+			ErrorMsg = FText::Format(LOCTEXT("BadAssetsInVaultText", "The Asset is in the Vault folder, but not all of dependencies are located in the same subfolder as the current asset! Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(FormattedList));
 		}
 		else if (AssetHierarchyBadness == 3)
+		{
+			ErrorMsg = FText::Format(LOCTEXT("BadAssetsInAndOutsideVaultText", "Your asset is inside the vault folder, but not all of its dependencies are inside the vault! Some assets might also be in the vault, but not in the same subfolder. Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(FormattedList));
+		}
+		else if (AssetHierarchyBadness == 4)
 		{
 			ErrorMsg = FText::Format(LOCTEXT("BadAssetsOutsideVaultText", "Your asset isn't inside the vault folder and not all of its dependencies are located in the same subfolder as the current asset! Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(FormattedList));
 		}
@@ -1137,6 +1167,13 @@ FSlateColor SPublisherWindow::GetSubmitButtonColor() const
 void SPublisherWindow::CheckDependencies()
 {
 	AssetHierarchyBadness = UAssetPublisher::CheckForGoodAssetHierarchy(CurrentlySelectedAsset, Dependencies, BadDependencies);
+}
+
+// logic to execute when the vault gets  openede by right clicking an asset in the content browser.
+void SPublisherWindow::OpenWithAsset(FAssetData AssetForExport)
+{
+	CurrentlySelectedAsset = AssetForExport;
+	this->OnAssetSelected(AssetForExport);
 }
 
 #undef LOCTEXT_NAMESPACE

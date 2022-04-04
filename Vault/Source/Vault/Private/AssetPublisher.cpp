@@ -115,6 +115,7 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 	
 	bool IsInVaultFolder = true;
 	bool IsInSameSubfolder = true;
+	bool AreAllDependenciesInVaultFolder = true;
 	FString RootPath = AssetData.PackageName.ToString();
 	FString OriginalRootString;
 	RootPath.RemoveFromStart(TEXT("/"));
@@ -135,10 +136,18 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 	for (FName Dependency : AllDependencies)
 	{
 		Dependency.ToString().ParseIntoArray(DependencyFolders, TEXT("/"));
+		DependencyFolders.RemoveAt(0,1,true);
 
 		if (IsInVaultFolder)
 		{
-			if (!AssetFolders[0].Equals(DependencyFolders[1], ESearchCase::CaseSensitive) || !AssetFolders[1].Equals(DependencyFolders[2], ESearchCase::CaseSensitive))
+			if (!AssetFolders[0].Equals(DependencyFolders[0], ESearchCase::CaseSensitive))
+			{
+				// Dependency is not in vault folder
+				AreAllDependenciesInVaultFolder = false;
+				IsInSameSubfolder = false;
+				BadAssets.Add(Dependency);
+			}
+			else if (!AssetFolders[1].Equals(DependencyFolders[1], ESearchCase::CaseSensitive))
 			{
 				IsInSameSubfolder = false;
 				BadAssets.Add(Dependency);
@@ -146,7 +155,7 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 		}
 		else
 		{
-			if (!AssetFolders[0].Equals(DependencyFolders[1], ESearchCase::CaseSensitive))
+			if (!AssetFolders[0].Equals(DependencyFolders[0], ESearchCase::CaseSensitive))
 			{
 				IsInSameSubfolder = false;
 				BadAssets.Add(Dependency);
@@ -155,22 +164,26 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 
 	}
 
-	// return 0 for good, 1 for not in vault folder but in same subfolder, 2 for in vault folder but not in the same subfolder within it, 3 for neither in vault folder nor in same subfolder
-	if (IsInVaultFolder && IsInSameSubfolder)
+	// return 0 for good, 1 for not in vault folder but in same subfolder, 2 for in vault folder but not in the same subfolder within it, 3 for in the Vault folder but dependencies are outside of it, 4 for neither in vault folder nor in same subfolder
+	if (IsInVaultFolder && IsInSameSubfolder && AreAllDependenciesInVaultFolder)
 	{
 		return 0;
 	}
-	else if (!IsInVaultFolder && IsInSameSubfolder)
+	else if (!IsInVaultFolder && IsInSameSubfolder && AreAllDependenciesInVaultFolder)
 	{
 		return 1;
 	}
-	else if (IsInVaultFolder && !IsInSameSubfolder)
+	else if (IsInVaultFolder && !IsInSameSubfolder && AreAllDependenciesInVaultFolder)
 	{
 		return 2;
 	}
-	else if (!IsInVaultFolder && !IsInSameSubfolder)
+	else if (IsInVaultFolder && !IsInSameSubfolder && !AreAllDependenciesInVaultFolder)
 	{
 		return 3;
+	}
+	else if (!IsInVaultFolder && !IsInSameSubfolder && !AreAllDependenciesInVaultFolder)
+	{
+		return 4;
 	}
 	else
 	{
@@ -238,6 +251,10 @@ FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAs
 			}
 			if (HierarchyBadness == 2) {
 				ErrorMsg = FText::Format(LOCTEXT("BadAssetsInVaultText", "The Asset is in the Vault folder, but not all of dependencies are located in the same subfolder as the current asset! Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(BadAssetsString));
+			}
+			else if (HierarchyBadness == 3)
+			{
+				ErrorMsg = FText::Format(LOCTEXT("BadAssetsInAndOutsideVaultText", "Your asset is inside the vault folder, but not all of its dependencies are inside the vault! Some assets might also be in the vault, but not in the same subfolder. Please fix this!\nOnly continue if it has to be that way or you hate all your coworkers!\nProblematic Assets:\n{0}"), FText::FromString(BadAssetsString));
 			}
 			else
 			{

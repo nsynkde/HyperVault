@@ -60,6 +60,11 @@ void SVaultRootPanel::Construct(const FArguments& InArgs, const TSharedRef<SDock
 		];
 }
 
+void SVaultRootPanel::SetActiveSubTab(FName TabName)
+{
+	TabManager->TryInvokeTab(TabName);
+}
+
 TSharedRef<SDockTab> SVaultRootPanel::HandleTabManagerSpawnTab(const FSpawnTabArgs& Args, FName TabIdentifier) const
 {
 	TSharedPtr<SWidget> TabWidget = SNullWidget::NullWidget;
@@ -71,7 +76,6 @@ TSharedRef<SDockTab> SVaultRootPanel::HandleTabManagerSpawnTab(const FSpawnTabAr
 	{
 		DockTab->SetContent(SNew(SPublisherWindow));
 	}
-
 	else if (TabIdentifier == AssetBrowserTabId)
 	{
 		TSharedRef<SLoaderWindow> LoaderWidget = SNew(SLoaderWindow, DockTab, Args.GetOwnerWindow());
@@ -85,6 +89,10 @@ TSharedRef<SDockTab> SVaultRootPanel::HandleTabManagerSpawnTab(const FSpawnTabAr
 	else if (TabIdentifier == BatchPublisherTabId)
 	{
 		DockTab->SetContent(SNew(SBatchPublisherWindow));
+	}
+	else { 
+		UE_LOG(LogVault, Error, TEXT("You dun goofed! Attempted to open sub tab with an invalid identifier: %s"), *(TabIdentifier.ToString()));
+		check(false);
 	}
 
 

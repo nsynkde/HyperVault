@@ -58,6 +58,8 @@ TSharedRef< FSlateStyleSet > FVaultStyle::Create()
 
 	Style->Set("Vault.PluginAction", new IMAGE_BRUSH(TEXT("VaultIcon_40px"), Icon40x40));
 
+	Style->Set("Vault.Icon16px", new IMAGE_BRUSH(TEXT("VaultIcon_40px"), Icon16x16));
+
 	Style->Set(("Vault.Icon128px"), new IMAGE_BRUSH(TEXT("Icon128"), Icon128x128));
 	Style->Set(("Vault.Icon512px"), new IMAGE_BRUSH(TEXT("Icon512"), Icon512x512));
 

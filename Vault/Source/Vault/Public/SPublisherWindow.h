@@ -112,6 +112,7 @@ class VAULT_API SPublisherWindow : public SCompoundWidget
 
 
 	void CheckDependencies();
+	void OpenWithAsset(FAssetData AssetForExport);
 	int32 AssetHierarchyBadness;
 	TSet<FName> Dependencies;
 	TSet<FName> BadDependencies;

@@ -31,6 +31,7 @@ DEFINE_LOG_CATEGORY(LogVault);
 class FVaultCommands : public TCommands<FVaultCommands>
 {
 public:
+
 	FVaultCommands()
 		: TCommands<FVaultCommands>(
 			TEXT("Vault"),
@@ -69,8 +70,6 @@ void FVaultModule::StartupModule()
 	// load libssh library
 	LoadDependency(LibDir, TEXT("ssh"), LibHandle);
 
-
-
 	// Init our styles
 	FVaultStyle::Initialize();
 
@@ -108,10 +107,10 @@ void FVaultModule::StartupModule()
 	}
 
 	// TODO: Add content browser right click action
-	//FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>(TEXT("ContentBrowser"));
-	//TArray<FContentBrowserMenuExtender_SelectedPaths>& MenuExtenderDelegates = ContentBrowserModule.GetAllPathViewContextMenuExtenders();
-	//// Create new delegate that will be called to provide our menu extener
-	//MenuExtenderDelegates.Add(FContentBrowserMenuExtender_SelectedPaths::CreateRaw(this, &FVaultModule::AssetMenuExtender));
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::LoadModuleChecked<FContentBrowserModule>(TEXT("ContentBrowser"));
+	TArray<FContentBrowserMenuExtender_SelectedAssets>& MenuExtenderDelegates = ContentBrowserModule.GetAllAssetViewContextMenuExtenders();
+	// Create new delegate that will be called to provide our menu extender
+	MenuExtenderDelegates.Add(FContentBrowserMenuExtender_SelectedAssets::CreateRaw(this, &FVaultModule::AssetMenuExtender));
 
 	// Setup Operations Tab
 	const FText VaultBasePanelWindowTitle = LOCTEXT("OperationsWindowTitleLabel", "The Vault");
@@ -123,7 +122,7 @@ void FVaultModule::StartupModule()
 	TabManager->RegisterNomadTabSpawner(VaultTabName, FOnSpawnTab::CreateRaw(this, &FVaultModule::CreateVaultMajorTab))
 		.SetDisplayName(VaultBasePanelWindowTitle)
 		.SetTooltipText(VaultBasePanelWindowTooltip)
-		//.SetIcon(FSlateIcon((FVaultStyle::Get().GetBrush("Vault.Icon40"))));
+		.SetIcon(FSlateIcon("VaultStyle", "Vault.Icon16px"))
 		.SetMenuType(ETabSpawnerMenuType::Hidden); //Hide root menu from the windows dropdown
 }
 
@@ -142,7 +141,16 @@ void FVaultModule::SpawnOperationsTab()
 	//VaultConnection::Get().Initialize();
 	FVaultStyle::CacheThumbnailsLocally();
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
-	TabManager->InvokeTab(VaultTabName);
+	TabManager->TryInvokeTab(VaultTabName);
+}
+
+void FVaultModule::SpawnOperationsTab(FName SubTabName)
+{
+	//VaultConnection::Get().Initialize();
+	FVaultStyle::CacheThumbnailsLocally();
+	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
+	TabManager->TryInvokeTab(VaultTabName);
+	VaultBasePanelWidget->SetActiveSubTab(SubTabName);
 }
 
 FVaultModule& FVaultModule::Get()
@@ -164,9 +172,9 @@ TSharedRef<SDockTab> FVaultModule::CreateVaultMajorTab(const FSpawnTabArgs& TabS
 	const TSharedRef<SDockTab> SpawnedTab = SNew(SDockTab)
 		.TabRole(ETabRole::MajorTab);
 
-	TSharedRef<SVaultRootPanel> VaultBasePanelWidget = SNew(SVaultRootPanel, SpawnedTab, TabSpawnArgs.GetOwnerWindow());
+	VaultBasePanelWidget = SNew(SVaultRootPanel, SpawnedTab, TabSpawnArgs.GetOwnerWindow());
 
-	SpawnedTab->SetContent(VaultBasePanelWidget);
+	SpawnedTab->SetContent(VaultBasePanelWidget.ToSharedRef());
 
 	return SpawnedTab;
 }
@@ -208,19 +216,20 @@ void FVaultModule::AddToolbarExtension(FToolBarBuilder& Builder)
 	Builder.AddToolBarButton(FVaultCommands::Get().PluginAction);
 }
 
-//TSharedRef<FExtender> FVaultModule::AssetMenuExtender(const TArray<FString>& Path)
-//{
-//	// Extension variable contains a copy of selected paths array, you must keep Extension somewhere to prevent it from being deleted/garbage collected!
-//	Extension = MakeShareable(new FContentBrowserMenuExtension(Path));
-//	// Create extender that contains a delegate that will be called to get information about new context menu items
-//	TSharedPtr<FExtender> MenuExtender = MakeShareable(new FExtender());
-//	// Create a Shared-pointer delegate that keeps a weak reference to object
-//	// "NewFolder" is a hook name that is used by extender to identify externders that will extend path context menu
-//	MenuExtender->AddMenuExtension("NewFolder", EExtensionHook::After, TSharedPtr<FUICommandList>(),
-//		FMenuExtensionDelegate::CreateSP(Extension.ToSharedRef(),
-//			&FContentBrowserMenuExtension::AddMenuEntry));
-//	return MenuExtender.ToSharedRef();
-//}
+TSharedRef<FExtender> FVaultModule::AssetMenuExtender(const TArray<FAssetData>& Assets)
+{
+	// Extension variable contains a copy of selected paths array, you must keep Extension somewhere to prevent it from being deleted/garbage collected!
+	Extension = MakeShareable(new FContentBrowserMenuExtension(Assets));
+	// Create extender that contains a delegate that will be called to get information about new context menu items
+	TSharedPtr<FExtender> MenuExtender = MakeShared<FExtender>();
+	// Create a Shared-pointer delegate that keeps a weak reference to object
+	// "NewFolder" is a hook name that is used by extender to identify extenders that will extend path context menu
+	MenuExtender->AddMenuExtension(
+		"AssetContextSourceControl", EExtensionHook::After, TSharedPtr<FUICommandList>(),
+		FMenuExtensionDelegate::CreateSP(Extension.ToSharedRef(),
+		&FContentBrowserMenuExtension::AddMenuEntry));
+	return MenuExtender.ToSharedRef();
+}
 
 #undef LOCTEXT_NAMESPACE
 	

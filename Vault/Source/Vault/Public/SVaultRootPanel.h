@@ -13,6 +13,7 @@ class SVaultRootPanel : public SCompoundWidget
 	SLATE_END_ARGS()
 
 	void Construct(const FArguments& InArgs, const TSharedRef<SDockTab>& ConstructUnderMajorTab, const TSharedPtr<SWindow>& ConstructUnderWindow);
+	void SetActiveSubTab(FName TabName);
 
 private:
 
