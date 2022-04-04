@@ -14,7 +14,7 @@
 // Folder Names - These 2 vars registered in header for access elsewhere.
 const FString FVaultSettings::DefaultVaultSettingsFolder("Vault");
 //const FString FVaultSettings::DefaultGlobalsPath(FPlatformProcess::UserDir() + DefaultVaultSettingsFolder);
-const FString FVaultSettings::DefaultGlobalsPath("V:/" + DefaultVaultSettingsFolder);
+const FString FVaultSettings::DefaultGlobalsPath("G:/Shared drives/HyperVault/" + DefaultVaultSettingsFolder);
 
 // Filenames
 static const FString GlobalSettingsFilename = "VaultGlobalSettings.json";
@@ -22,7 +22,7 @@ static const FString GlobalTagPoolFilename = "VaultTags.json";
 static const FString LocalSettingsFilename = "VaultLocalSettings.json";
 
 // File Paths - static const FString DefaultGlobalsPath = FPlatformProcess::UserDir() + DefaultVaultSettingsFolder;
-static const FString DefaultGlobalTagsPath = "V:/" + FVaultSettings::DefaultVaultSettingsFolder;
+static const FString DefaultGlobalTagsPath = "G:/Shared drives/HyperVault/" + FVaultSettings::DefaultVaultSettingsFolder;
 static const FString VaultPluginRoot = IPluginManager::Get().FindPlugin(TEXT("Vault"))->GetBaseDir();
 //static const FString LocalSettingsFilePathFull = VaultPluginRoot / LocalSettingsFilename;
 static const FString GlobalSettingsFilePathFull = FVaultSettings::DefaultGlobalsPath / GlobalSettingsFilename;
@@ -109,6 +109,8 @@ void FVaultSettings::Initialize()
 		FSlateRenderer* SlateRenderer = FSlateApplication::Get().GetRenderer();
 		LoadedDelegateHandle = SlateRenderer->OnSlateWindowRendered().AddRaw(this, &FVaultSettings::OnEditorLoaded);
 	}
+
+	CheckConnection();
 }
 
 // Get vault local
@@ -139,7 +141,15 @@ FString FVaultSettings::GetAssetLibraryRoot()
 
 	if (SettingsObj.IsValid())
 	{
-		return SettingsObj->GetStringField(LibraryPath);
+		FString OutString;
+		if (SettingsObj->TryGetStringField(LibraryPath, OutString))
+		{
+			return OutString;
+		}
+		else
+		{
+			return FString();
+		}
 	}
 	return FString();
 }
@@ -152,6 +162,36 @@ FString FVaultSettings::GetThumbnailCacheRoot()
 		return SettingsObj->GetStringField(ThumbnailCachePath);
 	}
 	return FString();
+}
+
+bool FVaultSettings::CheckConnection()
+{
+	IsConnected = false;
+	if (GetVaultGlobalSettings().IsValid())
+	{
+		FString OutputDirectory = FVaultSettings::Get().GetAssetLibraryRoot();
+		if (!OutputDirectory.IsEmpty() && FPaths::DirectoryExists(OutputDirectory))
+		{
+			IsConnected = true;
+		}
+		else if (OutputDirectory.IsEmpty())
+		{
+			IsConnected = false;
+		}
+		else
+		{
+			IPlatformFile& platformFile = FPlatformFileManager::Get().GetPlatformFile();
+			if (!platformFile.CreateDirectory(*OutputDirectory))
+			{
+				IsConnected = false;
+			}
+			else
+			{
+				IsConnected = true;
+			}
+		}
+	}
+	return IsConnected;
 }
 
 // Write any Json file out to a file.

@@ -181,7 +181,7 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 	{
 		return 3;
 	}
-	else if (!IsInVaultFolder && !IsInSameSubfolder && !AreAllDependenciesInVaultFolder)
+	else if (!IsInVaultFolder && !IsInSameSubfolder)
 	{
 		return 4;
 	}
@@ -195,6 +195,20 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAsset, FVaultMetadata AssetPublishMetadata)
 {
 	const FString OutputDirectory = FVaultSettings::Get().GetAssetLibraryRoot();
+
+	// if outputdirectory can't be found and can't be created we might have lost connection
+	if (!FVaultSettings::Get().CheckConnection())
+	{
+		const FText ErrorMsg = LOCTEXT("OutputDirectoryNotFoundMsg", "Vault folder wasn't found! Check your network connection if it is located on a network share.");
+		const FText ErrorTitle = LOCTEXT("OutputDirectoryNotFoundTitle", "Output Directory not found");
+
+		UE_LOG(LogVault, Error, TEXT("Output Directory of the Vault wasn't found."));
+
+		const EAppReturnType::Type Confirmation = FMessageDialog::Open(
+			EAppMsgType::Ok, ErrorMsg, &ErrorTitle);
+
+		return FReply::Handled();
+	}
 
 	// Pack file path, only used here for duplicate detection
 	const FString PackageFileOutput = OutputDirectory / PackageName + TEXT(".upack");
@@ -212,7 +226,7 @@ FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAs
 		if (Confirmation == EAppReturnType::Cancel)
 		{
 			UE_LOG(LogVault, Error, TEXT("User cancelled packaging operation due to duplicate pack found"));
-			return FReply::Handled();;
+			return FReply::Handled();
 		}
 	}
 

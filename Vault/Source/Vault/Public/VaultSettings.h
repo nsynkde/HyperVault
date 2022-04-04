@@ -46,6 +46,8 @@ public:
 	static const FString LocalSettingsFilePathFull;
 	static const FString DefaultThumbnailCacheFolder;
 
+	bool CheckConnection();
+
 private:
 
 	// Easy write to file
@@ -71,4 +73,6 @@ private:
 	FDelegateHandle LoadedDelegateHandle;
 	void OnEditorLoaded(SWindow& SlateWindow, void* ViewportRHIPtr);
 
+	//if we are connected to the global vault path
+	bool IsConnected;
 };

@@ -143,6 +143,8 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 private:
 	int32 LastSearchTextLength;
 
+	bool IsConnected;
+
 public:
 
 	void ModifyActiveTagFilters(FString TagModified, bool bFilterThis);

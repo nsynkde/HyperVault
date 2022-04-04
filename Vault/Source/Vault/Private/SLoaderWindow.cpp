@@ -298,6 +298,9 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.OnTextCommitted(this, &SLoaderWindow::OnSearchBoxCommitted)
 								.DelayChangeNotificationsWhileTyping(false)
 								.Visibility(EVisibility::Visible)
+								.IsEnabled_Lambda([this] {
+									return IsConnected;
+								})
 								.Style(FVaultStyle::Get(), "AssetSearchBar")
 								.AddMetaData<FTagMetaData>(FTagMetaData(TEXT("AssetSearch")))
 							]
@@ -322,6 +325,35 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								]
 							]
 						]
+
+						// Not Connected Message
+						+ SVerticalBox::Slot()
+						.AutoHeight()
+							[
+								SNew(SBox)
+								.MinDesiredHeight(30.f)
+								.MaxDesiredHeight(50.f)
+								[
+									SNew(SMultiLineEditableTextBox)
+									.IsReadOnly(true)
+									.AllowMultiLine(true)
+									.AlwaysShowScrollbars(false)
+									.BackgroundColor(FLinearColor::Black)
+									.ForegroundColor(FLinearColor::Red)
+									.Text(LOCTEXT("VaultFailedConnection", "Couldn't connect to vault folder!\nCheck if the location set in your local settings file is reachable."))
+									.Visibility_Lambda([this]
+									{
+										if (IsConnected)
+										{
+											return EVisibility::Collapsed;
+										}
+										else
+										{
+											return EVisibility::Visible;
+										}
+									})
+								]
+							]
 
 						// Tile View
 						+ SVerticalBox::Slot()
@@ -900,8 +932,15 @@ void SLoaderWindow::DeleteAssetPack(TSharedPtr<FVaultMetadata> InPack)
 
 void SLoaderWindow::RefreshAvailableFiles()
 {
-	MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
-	FVaultStyle::CacheThumbnailsLocally();
+	IsConnected = FVaultSettings::Get().CheckConnection();
+	if (IsConnected) {
+		MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
+		FVaultStyle::CacheThumbnailsLocally();
+	}
+	else
+	{
+		UE_LOG(LogVault, Error, TEXT("Couldn't find vault folder! Connection might be lost."))
+	}
 }
 
 // Applies the List of filters all together.

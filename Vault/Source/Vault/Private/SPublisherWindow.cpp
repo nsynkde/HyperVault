@@ -100,6 +100,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 	//const FString VaultPluginContentPath = IPluginManager::Get().FindPlugin(TEXT("Vault"))->GetContentDir();
 	//const FString DefaultMapPath = VaultPluginContentPath / "PresetMap.umap";
 	//UObject* MapPtr = LoadObject<UObject>(NULL, *DefaultMapPath, NULL, LOAD_None, NULL);
+	//MapPtr = LoadObject<UObject>(NULL, TEXT("/Game/Main.umap"));
 	//FAssetData PresetMap = FAssetData(MapPtr);
 	//CurrentlySelectedScreenshotMap = PresetMap;
 	
