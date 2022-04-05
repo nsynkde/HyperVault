@@ -18,8 +18,7 @@ public class Vault : ModuleRules
 				"Core",
 				"CoreUObject",
 				"Engine",
-				"UnrealEd",
-				"libssh"
+				"UnrealEd"
 			});
 			
 		

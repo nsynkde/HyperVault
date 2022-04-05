@@ -12,7 +12,6 @@
 #include "SPublisherWindow.h"
 #include "AssetPublisher.h"
 #include "LevelEditor.h"
-#include "VaultConnection.h"
 
 #include "HAL/PlatformProcess.h"
 #include "Misc/Paths.h"
@@ -56,19 +55,6 @@ void FVaultCommands::RegisterCommands()
 
 void FVaultModule::StartupModule()
 {
-	// determine directory paths
-	const FString BaseDir = IPluginManager::Get().FindPlugin("Vault")->GetBaseDir();
-	const FString libsshDir = FPaths::Combine(*BaseDir, TEXT("Source"), TEXT("ThirdParty"), TEXT("libssh"));
-#if PLATFORM_WINDOWS
-	#if PLATFORM_64BITS
-	const FString LibDir = FPaths::Combine(*libsshDir, TEXT("Win64"), TEXT("bin"));
-	#else
-	const FString LibDir = FPaths::Combine(*libsshDir, TEXT("Win32"), TEXT("bin"));
-	#endif
-#endif
-
-	// load libssh library
-	LoadDependency(LibDir, TEXT("ssh"), LibHandle);
 
 	// Init our styles
 	FVaultStyle::Initialize();
