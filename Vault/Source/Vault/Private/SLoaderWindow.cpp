@@ -17,6 +17,8 @@
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"
 #include <AssetRegistryModule.h>
+#include "ContentBrowserModule.h"
+#include "IContentBrowserSingleton.h"
 
 
 #define LOCTEXT_NAMESPACE "SVaultLoader"
@@ -902,9 +904,21 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 
 	AssetToolsModule.Get().ImportAssetTasks(Tasks);
 
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+
+	TArray<FAssetData> ImportedAssets;
+	for (FString ImportedPath : Task->ImportedObjectPaths)
+	{
+		FAssetData ImportedAsset = AssetRegistryModule.Get().GetAssetByObjectPath(FName(ImportedPath), true);
+		ImportedAssets.Add(ImportedAsset);
+	}
+
+	ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets);
+
 	// Allow GC to collect
 	Task->RemoveFromRoot();
-
 }
 
 void SLoaderWindow::DeleteAssetPack(TSharedPtr<FVaultMetadata> InPack)
