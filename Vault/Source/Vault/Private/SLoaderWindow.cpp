@@ -1006,7 +1006,7 @@ void SLoaderWindow::OnThumbnailSliderValueChanged(float Value)
 
 FText SLoaderWindow::DisplayTotalAssetsInLibrary() const
 {
-	int assetCount = FMetadataOps::FindAllMetadataInLibrary().Num();
+	int assetCount = MetaFilesCache.Num();
 
 	FText Display = FText::Format(LOCTEXT("displayassetcountlabel", "Total Assets in library: {0}"),assetCount);
 	return Display;

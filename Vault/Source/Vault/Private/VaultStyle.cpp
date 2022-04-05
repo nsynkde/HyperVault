@@ -419,12 +419,14 @@ bool FVaultStyle::CacheThumbnailsLocally()
 	TArray<FString> ThumbnailFilesCached;
 	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 
+	FString Root = FVaultSettings::Get().GetAssetLibraryRoot();
+
 	if (!PlatformFile.DirectoryExists(*FVaultSettings::Get().GetThumbnailCacheRoot()))
 	{
 		PlatformFile.CreateDirectory(*FVaultSettings::Get().GetThumbnailCacheRoot());
 	}
 
-	PlatformFile.FindFiles(ThumbnailFilesRemote, *FVaultSettings::Get().GetAssetLibraryRoot(), L".png");
+	PlatformFile.FindFiles(ThumbnailFilesRemote, *Root, L".png");
 	PlatformFile.FindFiles(ThumbnailFilesCached, *FVaultSettings::Get().GetThumbnailCacheRoot(), L".png");
 
 	FScopedSlowTask CacheThumbnailsTask(ThumbnailFilesRemote.Num(), LOCTEXT("CacheThumbnailsText", "Caching package thumbnails locally."));
@@ -449,7 +451,7 @@ bool FVaultStyle::CacheThumbnailsLocally()
 	for (FString ThumbnailCacheFile : ThumbnailFilesCached) {
 
 		FString Filename = FPaths::GetCleanFilename(ThumbnailCacheFile);
-		if (!ThumbnailFilesRemote.Contains(FPaths::Combine(FVaultSettings::Get().GetAssetLibraryRoot(), Filename)))
+		if (!ThumbnailFilesRemote.Contains(FPaths::Combine(Root, Filename)))
 		{
 			PlatformFile.DeleteFile(*ThumbnailCacheFile);
 		}
