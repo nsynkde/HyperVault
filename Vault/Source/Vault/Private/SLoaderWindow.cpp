@@ -631,6 +631,8 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 
 					if (SelectedAsset->IsMetaValid())
 					{
+						FVaultModule::Get().VaultBasePanelWidget->SetActiveSubTab("Asset Publisher");
+
 						FVaultMetadata AssetPublishMetadata;
 
 						AssetPublishMetadata.Author = SelectedAsset->Author;
@@ -639,8 +641,11 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 						AssetPublishMetadata.CreationDate = SelectedAsset->CreationDate;
 						AssetPublishMetadata.LastModified = FDateTime::UtcNow();
 						AssetPublishMetadata.Tags = SelectedAsset->Tags;
+						AssetPublishMetadata.ObjectsInPack = SelectedAsset->ObjectsInPack;
 
-						FString ObjectPath = *(SelectedAsset->ObjectsInPack.begin());
+						FVaultModule::Get().OnAssetForUpdateChosen.ExecuteIfBound(AssetPublishMetadata);
+
+						/*FString ObjectPath = *(SelectedAsset->ObjectsInPack.begin());
 						TArray<FString> temp;
 						ObjectPath.ParseIntoArray(temp, FGenericPlatformMisc::GetDefaultPathSeparator(), true);
 						ObjectPath = ObjectPath + "." + temp.Last();
@@ -659,7 +664,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 
 							const EAppReturnType::Type ErrorDialog = FMessageDialog::Open(
 								EAppMsgType::Ok, ErrorMsg, &ErrorTitle);
-						}
+						}*/
 					}
 
 					

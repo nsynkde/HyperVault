@@ -47,14 +47,17 @@ class VAULT_API SPublisherWindow : public SCompoundWidget
 	// Capture Thumbnail from the Screen
 	UTexture2D* CreateThumbnailFromScene();
 
+	UTexture2D* SelectThumbnailFromFile();
 	// Capture Thumbnail from a File
-	UTexture2D* CreateThumbnailFromFile();
+	UTexture2D* CreateThumbnailFromFile(FString SourceImagePath);
 
 	// Use unreals way of generating thumbnails
 	UTexture2D* CreateThumbnailFromAsset();
 
 	// All finished, gather everything and package.
 	FReply TryPackage();
+
+	FReply TryUpdateMetadata();
 
 	void GetAssetDependanciesRecursive(const FName AssetPath, TSet<FName>& AllDependencies, const FString& OriginalRoot) const;
 
@@ -113,6 +116,7 @@ class VAULT_API SPublisherWindow : public SCompoundWidget
 
 	void CheckDependencies();
 	void OpenWithAsset(FAssetData AssetForExport);
+	bool OpenWithMetadata(FVaultMetadata AssetMetadata);
 	int32 AssetHierarchyBadness;
 	TSet<FName> Dependencies;
 	TSet<FName> BadDependencies;

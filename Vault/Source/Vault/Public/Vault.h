@@ -12,6 +12,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogVault, Log, All);
 
 DECLARE_DELEGATE_OneParam(FExportAssetDelegate, FAssetData&);
+DECLARE_DELEGATE_OneParam(FUpdateAssetDelegate, FVaultMetadata&);
 
 class FToolBarBuilder;
 class FMenuBuilder;
@@ -22,6 +23,8 @@ class FVaultModule : public IModuleInterface
 public:
 	// Delegate when asset gets chosen from the content browser.
 	FExportAssetDelegate OnAssetForExportChosen;
+	// Delegate when asset should be updated (e.g. selected from the loader window)
+	FUpdateAssetDelegate OnAssetForUpdateChosen;
 
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;

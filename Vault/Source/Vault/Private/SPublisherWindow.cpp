@@ -5,6 +5,8 @@
 #include "AssetPublisherTagsCustomization.h"
 #include "Vault.h"
 #include "VaultSettings.h"
+#include "VaultStyle.h"
+#include "MetadataOps.h"
 
 #include "Misc/DateTime.h"
 #include "Engine/Engine.h"
@@ -23,7 +25,6 @@
 #include "ImageWriteBlueprintLibrary.h"
 #include "Interfaces/IPluginManager.h"
 #include "LevelEditorViewport.h" // Enabling GameView for Thumbnail Gen
-#include "VaultStyle.h"
 #include "ObjectTools.h"
 
 #define LOCTEXT_NAMESPACE "FVaultPublisher"
@@ -520,10 +521,17 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 
 	FVaultModule::Get().OnAssetForExportChosen.BindLambda([this](FAssetData& AssetToExport)
 		{
-			UE_LOG(LogVault, Log, TEXT("Delegate Binding executing!"));
 			// Checking that the widget is ready by using any accesible widget variable
 			if (ThumbnailWidget.IsValid()) {
 				OpenWithAsset(AssetToExport);
+			}
+		});
+
+	FVaultModule::Get().OnAssetForUpdateChosen.BindLambda([this](FVaultMetadata& AssetMetadata)
+		{
+			// Checking that the widget is ready by using any accesible widget variable
+			if (ThumbnailWidget.IsValid()) {
+				OpenWithMetadata(AssetMetadata);
 			}
 		});
 }
@@ -590,7 +598,7 @@ FReply SPublisherWindow::OnCaptureImageFromViewport()
 
 FReply SPublisherWindow::OnCaptureImageFromFile()
 {
-	ShotTexture = CreateThumbnailFromFile();
+	ShotTexture = SelectThumbnailFromFile();
 	FSlateBrush Brush;
 
 	if (ShotTexture)
@@ -661,7 +669,7 @@ UTexture2D* SPublisherWindow::CreateThumbnailFromScene()
 	return nullptr;
 }
 
-UTexture2D* SPublisherWindow::CreateThumbnailFromFile()
+UTexture2D* SPublisherWindow::SelectThumbnailFromFile()
 {
 	IDesktopPlatform* DesktopPlatform = FDesktopPlatformModule::Get();
 	if (DesktopPlatform == nullptr)
@@ -689,6 +697,12 @@ UTexture2D* SPublisherWindow::CreateThumbnailFromFile()
 	}
 
 	FString SourceImagePath = FPaths::ConvertRelativePathToFull(OutFiles[0]);
+
+	return CreateThumbnailFromFile(SourceImagePath);
+}
+
+UTexture2D* SPublisherWindow::CreateThumbnailFromFile(FString SourceImagePath)
+{
 	if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*SourceImagePath))
 	{
 		return nullptr;
@@ -886,6 +900,44 @@ FReply SPublisherWindow::TryPackage()
 	return UAssetPublisher::TryPackageAsset(PackageNameInput->GetText().ToString(), CurrentlySelectedAsset, AssetPublishMetadata);
 }
 
+FReply SPublisherWindow::TryUpdateMetadata()
+{
+	// TODO allow changing the name of a package
+
+	if (PackageNameInput->GetText().IsEmpty() ||
+		AuthorInput->GetText().IsEmpty() ||
+		DescriptionInput->GetText().IsEmpty() ||
+		TagsWidget->GetUserSelectedTags().Num() == 0)
+	{
+		OutputLogExpandableBox->SetExpanded(true);
+		UE_LOG(LogVault, Error, TEXT("One or more required fields are empty! Asset can stay empty when updating metadata only."));
+		return FReply::Handled();
+	}
+
+	const FString LibraryPath = FVaultSettings::Get().GetAssetLibraryRoot();
+	const FString MetaFilePath = LibraryPath / PackageNameInput->GetText().ToString() + ".meta";
+
+	FVaultMetadata AssetPublishMetadata = FMetadataOps::ReadMetadata(MetaFilePath);
+
+	AssetPublishMetadata.Author = FName(*AuthorInput->GetText().ToString());
+	AssetPublishMetadata.PackName = FName(*PackageNameInput->GetText().ToString());
+	AssetPublishMetadata.Description = DescriptionInput->GetText().ToString();
+	AssetPublishMetadata.LastModified = FDateTime::UtcNow();
+	AssetPublishMetadata.Tags = TagsWidget->GetUserSelectedTags();
+
+	// Lets see if we want to append any new tags to our global tags library
+	if (TagsWidget->GetShouldAddNewTagsToLibrary())
+	{
+		FVaultSettings::Get().SaveVaultTags(TagsWidget->GetUserSelectedTags());
+	}
+
+	UE_LOG(LogVault, Display, TEXT("Updating Metadata"));
+
+	FMetadataOps::WriteMetadata(AssetPublishMetadata);
+
+	return FReply::Handled();
+}
+
 void SPublisherWindow::GetAssetDependanciesRecursive(const FName AssetPath, TSet<FName>& AllDependencies, const FString& OriginalRoot) const
 {
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::GetModuleChecked<FAssetRegistryModule>("AssetRegistry");
@@ -1026,8 +1078,6 @@ void SPublisherWindow::OnAssetSelected(const FAssetData& InAssetData)
 
 	// Build our list of dependencies
 	CheckDependencies();
-
-	PackageNameInput->SetText(FText::FromName(InAssetData.AssetName));
 
 	ShotTexture = CreateThumbnailFromAsset();
 	FSlateBrush Brush;
@@ -1170,11 +1220,71 @@ void SPublisherWindow::CheckDependencies()
 	AssetHierarchyBadness = UAssetPublisher::CheckForGoodAssetHierarchy(CurrentlySelectedAsset, Dependencies, BadDependencies);
 }
 
-// logic to execute when the vault gets  openede by right clicking an asset in the content browser.
+// logic to execute when the vault gets opened by right clicking an asset in the content browser.
 void SPublisherWindow::OpenWithAsset(FAssetData AssetForExport)
 {
 	CurrentlySelectedAsset = AssetForExport;
 	this->OnAssetSelected(AssetForExport);
+}
+
+bool SPublisherWindow::OpenWithMetadata(FVaultMetadata AssetMetadata)
+{
+	FString ObjectPath = *(AssetMetadata.ObjectsInPack.begin());
+	TArray<FString> temp;
+	ObjectPath.ParseIntoArray(temp, FGenericPlatformMisc::GetDefaultPathSeparator(), true);
+	FString FullObjectPath = ObjectPath + "." + temp.Last();
+
+	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+	FAssetData AssetData = AssetRegistryModule.Get().GetAssetByObjectPath(FName(FullObjectPath), true);
+
+	if (AssetData.IsValid())
+	{
+		this->OnAssetSelected(AssetData);
+	}
+	else
+	{
+		CurrentlySelectedAsset = nullptr;
+		OutputLogExpandableBox->SetExpanded(true);
+		UE_LOG(LogVault, Warning, TEXT("Original root asset (%s) of the selected package doesn't exist in this project!"), *ObjectPath);
+	}
+
+	FString SourceImagePath = FVaultSettings::Get().GetAssetLibraryRoot() + FGenericPlatformMisc::GetDefaultPathSeparator() + AssetMetadata.PackName.ToString() + ".png";
+
+	ShotTexture = CreateThumbnailFromFile(SourceImagePath);
+	FSlateBrush Brush;
+
+	if (ShotTexture)
+	{
+		Brush.SetResourceObject(ShotTexture);
+		Brush.DrawAs = ESlateBrushDrawType::Image;
+		Brush.SetImageSize(FVector2D(VAULT_PUBLISHER_THUMBNAIL_SIZE, VAULT_PUBLISHER_THUMBNAIL_SIZE));
+		ThumbBrush = Brush;
+	}
+	else
+	{
+		const FSlateBrush* MyBrush = FVaultStyle::Get().GetBrush("Vault.Icon512px");
+		ThumbBrush = *MyBrush;
+		ThumbBrush.SetImageSize(FVector2D(VAULT_PUBLISHER_THUMBNAIL_SIZE));
+	}
+
+	PackageNameInput->SetText(FText::FromName(AssetMetadata.PackName));
+	DescriptionInput->SetText(FText::FromString(AssetMetadata.Description));
+	FString Tags = "";
+	for (FString ATag : AssetMetadata.Tags)
+	{
+		if (Tags.IsEmpty())
+		{
+			Tags += ATag;
+		}
+		else
+		{
+			Tags += "," + ATag;
+		}
+	}
+
+	TagsWidget->TagsCustomBox->SetText(FText::FromString(Tags));
+
+	return true;
 }
 
 #undef LOCTEXT_NAMESPACE
