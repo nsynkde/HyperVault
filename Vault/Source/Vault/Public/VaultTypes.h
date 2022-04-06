@@ -9,7 +9,10 @@
 struct FVaultMetadata
 {
 	FName Author;
+	// visible packname
 	FName PackName;
+	// Unique ID for the package used as filename for its .upack, .meta and .png files.
+	FName FileId;
 	FString Description;
 	TSet<FString> Tags;
 	TSoftObjectPtr<UTexture2DDynamic> Thumbnail;
@@ -26,6 +29,7 @@ struct FVaultMetadata
 	{
 		Author = NAME_None;
 		PackName = NAME_None;
+		FileId = NAME_None;
 		Description = FString();
 		CreationDate = FDateTime::UtcNow();
 		LastModified = FDateTime::UtcNow();
@@ -35,7 +39,7 @@ struct FVaultMetadata
 
 	bool IsMetaValid()
 	{
-		return PackName != NAME_None;
+		return PackName != NAME_None && FileId != NAME_None;
 	}
 
 	bool operator==(const FVaultMetadata& V) const;
@@ -43,7 +47,7 @@ struct FVaultMetadata
 
 FORCEINLINE uint32 GetTypeHash(const FVaultMetadata& V)
 {
-	const FString ComboString = V.PackName.ToString() + V.Author.ToString() + V.Description + V.CreationDate.ToString();
+	const FString ComboString = V.PackName.ToString() + V.FileId.ToString() + V.Author.ToString() + V.Description + V.CreationDate.ToString();
 	return GetTypeHash(ComboString);
 }
 
@@ -52,6 +56,7 @@ FORCEINLINE bool FVaultMetadata::operator==(const FVaultMetadata& V) const
 	return
 		Author == V.Author &&
 		PackName == V.PackName &&
+		FileId == V.FileId &&
 		Description == V.Description &&
 		CreationDate == V.CreationDate &&
 		LastModified == V.LastModified;

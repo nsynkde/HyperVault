@@ -32,7 +32,7 @@ bool FMetadataOps::WriteMetadata(FVaultMetadata& Metadata)
 	FJsonSerializer::Serialize(ParseMetadataToJson(Metadata).ToSharedRef(), Writer);
 
 	const FString Directory = FVaultSettings::Get().GetAssetLibraryRoot();
-	const FString Filepath = Directory / Metadata.PackName.ToString() + ".meta";
+	const FString Filepath = Directory / Metadata.FileId.ToString() + ".meta";
 	
 	return FFileHelper::SaveStringToFile(OutputString, *Filepath);
 
@@ -100,6 +100,7 @@ FVaultMetadata FMetadataOps::ParseMetaJsonToVaultMetadata(TSharedPtr<FJsonObject
 	// User Info
 	Metadata.Author = FName(*MetaFile->GetStringField("Author"));
 	Metadata.PackName = FName(*MetaFile->GetStringField("PackName"));
+	Metadata.FileId = FName(*MetaFile->GetStringField("FileId"));
 	Metadata.Description = MetaFile->GetStringField("Description");
 
 	// Tags
@@ -141,6 +142,7 @@ TSharedPtr<FJsonObject> FMetadataOps::ParseMetadataToJson(FVaultMetadata Metadat
 
 	MetaJson->SetStringField("Author", Metadata.Author.ToString());
 	MetaJson->SetStringField("PackName", Metadata.PackName.ToString());
+	MetaJson->SetStringField("FileId", Metadata.FileId.ToString());
 	MetaJson->SetStringField("Description", Metadata.Description);
 
 	// Tags

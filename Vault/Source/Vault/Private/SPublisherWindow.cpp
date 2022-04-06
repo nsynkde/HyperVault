@@ -864,10 +864,13 @@ FReply SPublisherWindow::TryPackage()
 
 #pragma endregion
 
+	FName FileId = UAssetPublisher::CreateUniquePackageFilename();
+
 	FVaultMetadata AssetPublishMetadata;
 
 	AssetPublishMetadata.Author = FName(*AuthorInput->GetText().ToString());
 	AssetPublishMetadata.PackName = FName(*PackageNameInput->GetText().ToString());
+	AssetPublishMetadata.FileId = FileId;
 	AssetPublishMetadata.Description = DescriptionInput->GetText().ToString();
 	AssetPublishMetadata.CreationDate = FDateTime::UtcNow();
 	AssetPublishMetadata.LastModified = FDateTime::UtcNow();
@@ -885,19 +888,7 @@ FReply SPublisherWindow::TryPackage()
 
 	UE_LOG(LogVault, Display, TEXT("Starting Packaging Operation"));
 
-
-	const FString OutputDirectory = FVaultSettings::Get().GetAssetLibraryRoot();
-	const FString ScreenshotPath = OutputDirectory / PackageNameInput->GetText().ToString() + TEXT(".png");
-
-	FImageWriteOptions Params;
-	Params.bAsync = true;
-	Params.bOverwriteFile = true;
-	Params.CompressionQuality = 90;
-	Params.Format = EDesiredImageFormat::PNG;
-
-	UImageWriteBlueprintLibrary::ExportToDisk(ShotTexture, ScreenshotPath, Params);
-
-	return UAssetPublisher::TryPackageAsset(PackageNameInput->GetText().ToString(), CurrentlySelectedAsset, AssetPublishMetadata);
+	return UAssetPublisher::TryPackageAsset(FileId.ToString(), CurrentlySelectedAsset, AssetPublishMetadata, ShotTexture);
 }
 
 FReply SPublisherWindow::TryUpdateMetadata()
@@ -1248,7 +1239,7 @@ bool SPublisherWindow::OpenWithMetadata(FVaultMetadata AssetMetadata)
 		UE_LOG(LogVault, Warning, TEXT("Original root asset (%s) of the selected package doesn't exist in this project!"), *ObjectPath);
 	}
 
-	FString SourceImagePath = FVaultSettings::Get().GetAssetLibraryRoot() + FGenericPlatformMisc::GetDefaultPathSeparator() + AssetMetadata.PackName.ToString() + ".png";
+	FString SourceImagePath = FVaultSettings::Get().GetAssetLibraryRoot() + FGenericPlatformMisc::GetDefaultPathSeparator() + AssetMetadata.FileId.ToString() + ".png";
 
 	ShotTexture = CreateThumbnailFromFile(SourceImagePath);
 	FSlateBrush Brush;

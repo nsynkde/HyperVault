@@ -475,7 +475,7 @@ void SLoaderWindow::PopulateBaseAssetList()
 {
 	FilteredAssetItems.Empty();
 
-	for (FVaultMetadata Meta : MetaFilesCache)
+	for (FVaultMetadata Meta : FVaultModule::Get().MetaFilesCache)
 	{
 		FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Meta)));
 	}
@@ -491,7 +491,7 @@ void SLoaderWindow::PopulateTagArray()
 	TMap<FString, FTagFilteringItemPtr> TagCloudMap;
 
 	// For each Asset in our global list of assets...
-	for (auto Asset : MetaFilesCache)
+	for (auto Asset : FVaultModule::Get().MetaFilesCache)
 	{
 		// Get each tag belonging to that asset...
 		for (const FString AssetTag : Asset.Tags)
@@ -637,6 +637,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 
 						AssetPublishMetadata.Author = SelectedAsset->Author;
 						AssetPublishMetadata.PackName = SelectedAsset->PackName;
+						AssetPublishMetadata.FileId = SelectedAsset->FileId;
 						AssetPublishMetadata.Description = SelectedAsset->Description;
 						AssetPublishMetadata.CreationDate = SelectedAsset->CreationDate;
 						AssetPublishMetadata.LastModified = FDateTime::UtcNow();
@@ -678,10 +679,20 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
 				{
 					const FString LibraryPath = FVaultSettings::Get().GetAssetLibraryRoot();
-					const FString MetaFilePath = LibraryPath / SelectedAsset->PackName.ToString() + ".meta";
+					const FString MetaFilePath = LibraryPath / SelectedAsset->FileId.ToString() + ".meta";
 
-					// Rather than provide a tonne of edit options in engine and a load of extra UI support, for the time being lets just open the file in a text editor
-					FPlatformProcess::LaunchFileInDefaultExternalApplication(*MetaFilePath);
+					const FText WarningMsg = LOCTEXT("EditAssetMetadataMsg", "Do you really want to manually edit this assets metadata?\nOnly continue if you know what you are doing.");
+					const FText WarningTitle = LOCTEXT("EditAssetMetadataTitle", "Attempting to edit Metadata");
+
+					const EAppReturnType::Type Confirmation = FMessageDialog::Open(
+						EAppMsgType::YesNo, WarningMsg, &WarningTitle);
+
+					if (Confirmation == EAppReturnType::Yes)
+					{
+						// Rather than provide a tonne of edit options in engine and a load of extra UI support, for the time being lets just open the file in a text editor
+						FPlatformProcess::LaunchFileInDefaultExternalApplication(*MetaFilePath);
+					}
+
 
 				}),
 				FCanExecuteAction(),
@@ -890,7 +901,7 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 	const FString LibraryPath = FVaultSettings::Get().GetAssetLibraryRoot();
 
 	// All files live in same directory, so we just do some string mods to get the pack file that matches the meta file.
-	const FString AssetToImportTemp = LibraryPath / InPack->PackName.ToString() + ".upack";
+	const FString AssetToImportTemp = LibraryPath / InPack->FileId.ToString() + ".upack";
 
 	// UPacks import natively with Unreal, so no need to try to use the PakUtilities, better to use the native importer and let Unreal handle the Pak concepts. 
 	FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
@@ -932,7 +943,7 @@ void SLoaderWindow::DeleteAssetPack(TSharedPtr<FVaultMetadata> InPack)
 	UE_LOG(LogVault, Display, TEXT("Deleting File(s) from Vault: %s"), *InPack->PackName.ToString());
 
 	const FString LibraryPath = FVaultSettings::Get().GetAssetLibraryRoot();
-	const FString FilePathAbsNoExt = LibraryPath / InPack->PackName.ToString();
+	const FString FilePathAbsNoExt = LibraryPath / InPack->FileId.ToString();
 	const FString AbsThumbnailPath = FilePathAbsNoExt + ".png";
 	const FString AbsMetaPath = FilePathAbsNoExt + ".meta";
 	const FString AbsPackPath = FilePathAbsNoExt + ".upack";
@@ -942,7 +953,7 @@ void SLoaderWindow::DeleteAssetPack(TSharedPtr<FVaultMetadata> InPack)
 	IFileManager::Get().Delete(*AbsPackPath, true);
 
 
-	MetaFilesCache.Remove(*InPack);
+	FVaultModule::Get().MetaFilesCache.Remove(*InPack);
 	RefreshLibrary();
 	//UpdateFilteredAssets();
 	//TileView->RebuildList();
@@ -953,7 +964,7 @@ void SLoaderWindow::RefreshAvailableFiles()
 {
 	IsConnected = FVaultSettings::Get().CheckConnection();
 	if (IsConnected) {
-		MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
+		FVaultModule::Get().UpdateMetaFilesCache();
 		FVaultStyle::CacheThumbnailsLocally();
 	}
 	else
@@ -976,7 +987,7 @@ void SLoaderWindow::UpdateFilteredAssets()
 		return;
 	}
 
-	for (auto Asset : MetaFilesCache)
+	for (auto Asset : FVaultModule::Get().MetaFilesCache)
 	{
 		// Apply all filtered Tags
 		for (auto UserTag : Asset.Tags)
@@ -1011,7 +1022,7 @@ void SLoaderWindow::OnThumbnailSliderValueChanged(float Value)
 
 FText SLoaderWindow::DisplayTotalAssetsInLibrary() const
 {
-	int assetCount = MetaFilesCache.Num();
+	int assetCount = FVaultModule::Get().MetaFilesCache.Num();
 
 	FText Display = FText::Format(LOCTEXT("displayassetcountlabel", "Total Assets in library: {0}"),assetCount);
 	return Display;

@@ -17,6 +17,7 @@
 #include "Misc/Paths.h"
 #include "Interfaces/IPluginManager.h"
 #include "ContentBrowserModule.h"
+#include "Metadataops.h"
 
 static const FName VaultTabName("VaultOperations");
 static const FName VaultPublisherName("VaultPublisher");
@@ -196,6 +197,10 @@ bool FVaultModule::LoadDependency(const FString& Dir, const FString& Name, void*
 	return true;
 }
 
+void FVaultModule::UpdateMetaFilesCache()
+{
+	MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
+}
 
 void FVaultModule::AddToolbarExtension(FToolBarBuilder& Builder)
 {

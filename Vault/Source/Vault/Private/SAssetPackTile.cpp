@@ -88,8 +88,8 @@ END_SLATE_FUNCTION_BUILD_OPTIMIZATION
 TSharedRef<SWidget> SAssetTileItem::CreateTileThumbnail(TSharedPtr<FVaultMetadata> Meta)
 {
 	const FString Root = FVaultSettings::Get().GetThumbnailCacheRoot();
-	const FString Pack = Meta->PackName.ToString();
-	const FString Filepath = Root / Pack + TEXT(".png");
+	const FString FileId = Meta->FileId.ToString();
+	const FString Filepath = Root / FileId + TEXT(".png");
 
 	if (FPaths::FileExists(Filepath) == false)
 	{

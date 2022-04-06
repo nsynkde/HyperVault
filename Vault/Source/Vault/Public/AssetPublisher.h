@@ -23,7 +23,7 @@ public:
 	//static FOnVaultPackagingCompleted& OnVaultPackagingCompleted() { return OnVaultPackagingCompletedDelegate; }
 	static FOnVaultPackagingCompleted OnVaultPackagingCompletedDelegate;
 
-	static FReply TryPackageAsset(FString PackageName, FAssetData ExportAsset, FVaultMetadata AssetPublishMetadata);
+	static FReply TryPackageAsset(FString PackageName, FAssetData ExportAsset, FVaultMetadata AssetPublishMetadata, UTexture2D* ThumbnailTexture);
 
 	static void GetAssetDependenciesRecursive(const FName AssetPath, TSet<FName>& AllDependencies, const FString& OriginalRoot);
 	/// <summary>
@@ -38,6 +38,8 @@ public:
 	static int32 CheckForGoodAssetHierarchy(const FAssetData AssetData, TSet<FName>& AllDependencies, TSet<FName>& BadAssets);
 
 	static void ConvertImageBufferUInt8ToFColor(TArray<uint8>& inputData, TArray<FColor>& outputData);
+	static FName CreateUniquePackageFilename(int length = 16);
+	static FVaultMetadata FindMetadataByPackName(FName PackName);
 private:
 
 	static void UpdateSystemMeta(FVaultMetadata& Metadata);

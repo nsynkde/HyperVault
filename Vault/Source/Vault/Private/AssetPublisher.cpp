@@ -10,6 +10,7 @@
 #include <AssetRegistryModule.h>
 #include "Slate.h"
 #include "SlateExtras.h"
+#include "ImageWriteBlueprintLibrary.h"
 
 #define LOCTEXT_NAMESPACE "FVaultPublisher"
 
@@ -54,7 +55,7 @@ bool UAssetPublisher::PackageSelected(TSet<FString> PackageObjects, FVaultMetada
 	
 	const FString Root = FVaultSettings::Get().GetAssetLibraryRoot();
 	
-	const FString Filename = Meta.PackName.ToString() + TEXT(".upack");
+	const FString Filename = Meta.FileId.ToString() + TEXT(".upack");
 
 	// Wrap Our Path in Quotes for use in Command-Line
 	
@@ -192,7 +193,7 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 	}
 }
 
-FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAsset, FVaultMetadata AssetPublishMetadata)
+FReply UAssetPublisher::TryPackageAsset(FString FileId, FAssetData ExportAsset, FVaultMetadata AssetPublishMetadata, UTexture2D* ThumbnailTexture)
 {
 	const FString OutputDirectory = FVaultSettings::Get().GetAssetLibraryRoot();
 
@@ -211,10 +212,23 @@ FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAs
 	}
 
 	// Pack file path, only used here for duplicate detection
-	const FString PackageFileOutput = OutputDirectory / PackageName + TEXT(".upack");
+	const FString PackageFileOutput = OutputDirectory / FileId + TEXT(".upack");
 
 
 	if (FPaths::FileExists(PackageFileOutput))
+	{
+
+		const FText ErrorMsg = LOCTEXT("TryFileOverwriteMsg", "The vault already contains a file with this name! You should never see this message... if you do please contact a developer!");
+		const FText ErrorTitle = LOCTEXT("TryFileOverwriteTitle", "This should not have happened...");
+
+		const EAppReturnType::Type Confirmation = FMessageDialog::Open(
+			EAppMsgType::Ok, ErrorMsg, &ErrorTitle);
+		return FReply::Handled();
+	}
+
+	FVaultMetadata ExistingMeta = FindMetadataByPackName(AssetPublishMetadata.PackName);
+
+	if (ExistingMeta.IsMetaValid())
 	{
 
 		const FText ErrorMsg = LOCTEXT("TryPackageOverwriteMsg", "A Vault item already exists with this pack name, are you sure you want to overwrite it?\nThis action cannot be undone.");
@@ -227,6 +241,11 @@ FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAs
 		{
 			UE_LOG(LogVault, Error, TEXT("User cancelled packaging operation due to duplicate pack found"));
 			return FReply::Handled();
+		}
+		else
+		{
+			AssetPublishMetadata.FileId = ExistingMeta.FileId;
+			FileId = ExistingMeta.FileId.ToString();
 		}
 	}
 
@@ -294,6 +313,16 @@ FReply UAssetPublisher::TryPackageAsset(FString PackageName, FAssetData ExportAs
 	}
 	//GetAssetDependenciesRecursive(ExportAsset.PackageName, AssetsToProcess, OriginalRootString);
 
+	const FString ScreenshotPath = OutputDirectory / FileId + TEXT(".png");
+
+	FImageWriteOptions Params;
+	Params.bAsync = true;
+	Params.bOverwriteFile = true;
+	Params.CompressionQuality = 90;
+	Params.Format = EDesiredImageFormat::PNG;
+
+	UImageWriteBlueprintLibrary::ExportToDisk(ThumbnailTexture, ScreenshotPath, Params);
+
 	FScopedSlowTask MainPackageTask(1.0F, LOCTEXT("AssetsToPackageText", "Collecting assets for packaging."));
 	MainPackageTask.MakeDialog();
 
@@ -358,6 +387,52 @@ void UAssetPublisher::ConvertImageBufferUInt8ToFColor(TArray<uint8>& inputData, 
 		FColor newColor = FColor(inputData[index + 2], inputData[index + 1], inputData[index], inputData[index + 3]);
 		outputData.Add(newColor);
 	}
+}
+
+FName UAssetPublisher::CreateUniquePackageFilename(int length)
+{
+	const FString AlpahNum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv";
+
+	FName Filename;
+
+	bool IsUnique = false;
+
+	FVaultModule::Get().UpdateMetaFilesCache();
+
+	while (!IsUnique)
+	{
+		FString temp = "";
+		for (int i = 0; i < length; i++)
+		{
+			temp.AppendChar(AlpahNum.GetCharArray()[FMath::RandRange(0, AlpahNum.Len())]);
+		}
+
+		Filename = FName(*temp);
+		IsUnique = true;
+
+		for (auto Meta : FVaultModule::Get().MetaFilesCache)
+		{
+			if (Meta.FileId == Filename)
+			{
+				IsUnique = false;
+				break;
+			}
+		}
+	}
+
+	return Filename;
+}
+
+FVaultMetadata UAssetPublisher::FindMetadataByPackName(FName PackName)
+{
+	for (auto Meta : FVaultModule::Get().MetaFilesCache)
+	{
+		if (Meta.PackName.IsEqual(PackName))
+		{
+			return Meta;
+		}
+	}
+	return FVaultMetadata();
 }
 
 
