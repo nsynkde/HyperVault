@@ -3,6 +3,7 @@
 #include "SAssetPackTile.h"
 #include "VaultSettings.h"
 #include "MetadataOps.h"
+#include "Vault.h"
 
 #include "SlateBasics.h"
 #include "ImageUtils.h"
@@ -14,6 +15,9 @@
 #include "Widgets/Colors/SColorBlock.h"
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
+#include "AssetPublisher.h"
+
+#include "Internationalization/BreakIterator.h"
 
 #define LOCTEXT_NAMESPACE "VaultListsDefinitions"
 
@@ -60,7 +64,7 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 		]
 
 		// File Name
-		+SVerticalBox::Slot()
+		/*+SVerticalBox::Slot()
 		.AutoHeight()
 		[
 			SNew(SHorizontalBox)
@@ -74,6 +78,30 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 					.WrapTextAt(300)
 					.Justification(ETextJustify::Left)
 				]
+		];*/
+
+		// File Name
+		+SVerticalBox::Slot()
+		.AutoHeight()
+		[
+			SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot()
+			.HAlign(HAlign_Left)
+			.AutoWidth()
+			.Padding(FMargin(8.0f, 11.0f, 3.0f, 0.0f))
+			[
+				SAssignNew(InlineRenameWidget, SInlineEditableTextBlock)
+				.Font(FEditorStyle::GetFontStyle("ContentBrowser.AssetTileViewNameFont"))
+				.Text(FText::FromName(InArgs._AssetItem->PackName.IsNone() ? TEXT("Unknown Pack") : AssetItem->PackName))
+				.WrapTextAt(300)
+				.OnBeginTextEdit(this, &SAssetTileItem::HandleBeginNameChange)
+				.OnTextCommitted(this, &SAssetTileItem::HandleNameCommitted)
+				.OnVerifyTextChanged(this, &SAssetTileItem::HandleVerifyNameChanged)
+				.IsReadOnly(this, &SAssetTileItem::IsNameReadOnly)
+				.Justification(ETextJustify::Center)
+				.LineBreakPolicy(FBreakIterator::CreateCamelCaseBreakIterator())
+				.ModiferKeyForNewLine(EModifierKey::None)
+			]
 		];
 		
 		ChildSlot
@@ -81,9 +109,29 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 			StandardWidget->AsShared()
 		];
 
+		if (AssetItem.IsValid())
+		{
+			AssetItem->OnRenameRequested().BindSP(InlineRenameWidget.Get(), &SInlineEditableTextBlock::EnterEditingMode);
+			AssetItem->OnRenameCanceled().BindSP(InlineRenameWidget.Get(), &SInlineEditableTextBlock::ExitEditingMode);
+		}
+
 
 }
 END_SLATE_FUNCTION_BUILD_OPTIMIZATION
+
+void SAssetTileItem::Tick(const FGeometry& AllottedGeometry, const double InCurrentTime, const float InDeltaTime)
+{
+	const float PrevSizeX = LastGeometry.Size.X;
+
+	LastGeometry = AllottedGeometry;
+
+	// Set cached wrap text width based on new "LastGeometry" value. 
+	// We set this only when changed because binding a delegate to text wrapping attributes is expensive
+	if (PrevSizeX != AllottedGeometry.Size.X && InlineRenameWidget.IsValid())
+	{
+		InlineRenameWidget->SetWrapTextAt(GetNameTextWrapWidth());
+	}
+}
 
 TSharedRef<SWidget> SAssetTileItem::CreateTileThumbnail(TSharedPtr<FVaultMetadata> Meta)
 {
@@ -120,6 +168,50 @@ TSharedRef<SWidget> SAssetTileItem::CreateTileThumbnail(TSharedPtr<FVaultMetadat
 			.Image(Brush.Get())
 			.Visibility(EVisibility::SelfHitTestInvisible)
 		];
+}
+
+void SAssetTileItem::HandleBeginNameChange(const FText& OriginalText)
+{
+
+}
+
+void SAssetTileItem::HandleNameCommitted(const FText& NewText, ETextCommit::Type CommitInfo)
+{
+	FVaultMetadata RenameMetaData;
+
+	RenameMetaData.Author = AssetItem->Author;
+	RenameMetaData.PackName = AssetItem->PackName;
+	RenameMetaData.FileId = AssetItem->FileId;
+	RenameMetaData.Description = AssetItem->Description;
+	RenameMetaData.CreationDate = AssetItem->CreationDate;
+	RenameMetaData.LastModified = FDateTime::UtcNow();
+	RenameMetaData.Tags = AssetItem->Tags;
+	RenameMetaData.MachineID = AssetItem->MachineID;
+	RenameMetaData.ObjectsInPack = AssetItem->ObjectsInPack;
+
+	if (UAssetPublisher::RenamePackage(FName(NewText.ToString()), RenameMetaData))
+	{
+		FVaultModule::Get().OnAssetWasUpdated.ExecuteIfBound();
+	}
+}
+
+bool SAssetTileItem::HandleVerifyNameChanged(const FText& NewText, FText& OutErrorMessage)
+{
+	if (AssetItem->PackName != FName(*NewText.ToString()) && UAssetPublisher::FindMetadataByPackName(FName(*NewText.ToString())).IsMetaValid())
+	{
+		InlineRenameWidget->SetColorAndOpacity(FLinearColor::Red);
+	}
+	else
+	{
+		InlineRenameWidget->SetColorAndOpacity(FLinearColor::White);
+	}
+
+	return !OnVerifyRenameCommit.IsBound() || OnVerifyRenameCommit.Execute(AssetItem, NewText, LastGeometry.GetLayoutBoundingRect(), OutErrorMessage);
+}
+
+bool SAssetTileItem::IsNameReadOnly() const
+{
+	return false;
 }
 
 #undef LOCTEXT_NAMESPACE

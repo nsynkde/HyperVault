@@ -6,8 +6,9 @@
 #include "Engine/Texture2DDynamic.h"
 
 // Any metadata required for your assets can be added here.
-struct FVaultMetadata
+class VAULT_API FVaultMetadata
 {
+public:
 	FName Author;
 	// visible packname
 	FName PackName;
@@ -24,6 +25,19 @@ struct FVaultMetadata
 	FString MachineID;
 	TSet<FString> ObjectsInPack;
 
+	/** Get the event fired whenever a rename is requested */
+	FSimpleDelegate& OnRenameRequested();
+
+	/** Get the event fired whenever a rename is canceled */
+	FSimpleDelegate& OnRenameCanceled();
+
+protected:
+
+	FSimpleDelegate RenameRequestedEvent;
+
+	FSimpleDelegate RenameCanceledEvent;
+
+public:
 	// Constructor
 	FVaultMetadata()
 	{

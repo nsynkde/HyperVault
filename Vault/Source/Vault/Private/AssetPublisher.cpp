@@ -389,6 +389,26 @@ void UAssetPublisher::ConvertImageBufferUInt8ToFColor(TArray<uint8>& inputData, 
 	}
 }
 
+
+bool UAssetPublisher::RenamePackage(FName NewPackName, FVaultMetadata Meta)
+{
+	if (NewPackName == Meta.PackName)
+	{
+		return false;
+	}
+	else if (FindMetadataByPackName(NewPackName).IsMetaValid())
+	{
+		UE_LOG(LogVault, Error, TEXT("PackName is already being used."));
+		return false;
+	}
+
+	Meta.PackName = NewPackName;
+
+	FMetadataOps::WriteMetadata(Meta);
+
+	return true;
+}
+
 FName UAssetPublisher::CreateUniquePackageFilename(int length)
 {
 	const FString AlpahNum = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv";

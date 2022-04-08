@@ -9,6 +9,7 @@
 #include "VaultStyle.h"
 #include "AssetPublisher.h"
 #include "VaultTypes.h"
+#include "VaultCommands.h"
 
 #include "ImageUtils.h"
 #include "EditorStyleSet.h"
@@ -160,7 +161,10 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 	LastSearchTextLength = 0;
 
 	// Bind to our publisher so we can refresh automatically when the user publishes an asset (they wont need to import it, but its a visual feedback for the user to check it appeared in the library
-	UAssetPublisher::OnVaultPackagingCompletedDelegate.BindRaw(this, &SLoaderWindow::OnNewAssetPublished);
+	UAssetPublisher::OnVaultPackagingCompletedDelegate.BindRaw(this, &SLoaderWindow::OnAssetUpdateHappened);
+
+	// Bind to vault module update delegate to automatically refresh when an asset was updated
+	FVaultModule::Get().OnAssetWasUpdated.BindRaw(this, &SLoaderWindow::OnAssetUpdateHappened);
 	
 	// Construct the Holder for the Metadata List
 	MetadataWidget = SNew(SVerticalBox);
@@ -610,6 +614,15 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 
 	FMenuBuilder MenuBuilder(true, nullptr, nullptr, true);
 
+	//FVaultModule::Get().PluginCommands->MapAction(
+	//	FVaultCommands::Get().Rename,
+	//	FExecuteAction::CreateLambda([this, SelectedAsset]()
+	//		{
+	//			UE_LOG(LogVault, Display, TEXT("Hello"));
+	//			SelectedAsset->OnRenameRequested().ExecuteIfBound();
+	//		}),
+	//	FCanExecuteAction());
+
 	static const FName FilterSelectionHook("AssetContextMenu");
 
 	MenuBuilder.BeginSection(FilterSelectionHook, LOCTEXT("AssetContextMenuLabel", "Vault Asset"));
@@ -627,7 +640,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_UpdateVaultAssetLabel", "Update Asset"), FText::GetEmpty(), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
 				{
-					// Republish asset with same data to update it
+					// On Asset Publisher prefilled to update an asset
 
 					if (SelectedAsset->IsMetaValid())
 					{
@@ -645,31 +658,21 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 						AssetPublishMetadata.ObjectsInPack = SelectedAsset->ObjectsInPack;
 
 						FVaultModule::Get().OnAssetForUpdateChosen.ExecuteIfBound(AssetPublishMetadata);
-
-						/*FString ObjectPath = *(SelectedAsset->ObjectsInPack.begin());
-						TArray<FString> temp;
-						ObjectPath.ParseIntoArray(temp, FGenericPlatformMisc::GetDefaultPathSeparator(), true);
-						ObjectPath = ObjectPath + "." + temp.Last();
-
-						FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-						FAssetData AssetData = AssetRegistryModule.Get().GetAssetByObjectPath(FName(ObjectPath), true);
-						
-						if (AssetData.IsValid())
-						{
-							UAssetPublisher::TryPackageAsset(SelectedAsset->PackName.ToString(), AssetData, AssetPublishMetadata);
-						}
-						else
-						{
-							const FText ErrorMsg = LOCTEXT("UpdateAssetNotExistMessage", "The base asset of the package you are trying to update does not exist in this project!");
-							const FText ErrorTitle = LOCTEXT("UpdateAssetNotExistTitle", "Asset Does Not Exist");
-
-							const EAppReturnType::Type ErrorDialog = FMessageDialog::Open(
-								EAppMsgType::Ok, ErrorMsg, &ErrorTitle);
-						}*/
 					}
 
 					
 
+				}),
+				FCanExecuteAction(),
+					FGetActionCheckState(),
+					FIsActionButtonVisible()));
+		// TODO understand why the fuck the command can't execute its function. Neither if its mapped in the VaultModule or in here above...
+		//MenuBuilder.AddMenuEntry(FVaultCommands::Get().Rename, NAME_None, LOCTEXT("ACM_RenameAssetLabel", "Rename Asset"), FText::GetEmpty(), FSlateIcon());
+
+		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_RenameAssetLabel", "Rename Asset"), FText::GetEmpty(), FSlateIcon(),
+			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
+				{
+					SelectedAsset->OnRenameRequested().ExecuteIfBound();
 				}),
 				FCanExecuteAction(),
 					FGetActionCheckState(),
@@ -1045,7 +1048,7 @@ void SLoaderWindow::RefreshLibrary()
 	UpdateFilteredAssets();
 }
 
-void SLoaderWindow::OnNewAssetPublished()
+void SLoaderWindow::OnAssetUpdateHappened()
 {
 	RefreshLibrary();
 }

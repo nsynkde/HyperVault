@@ -37,9 +37,18 @@ public:
 	/// <returns>returns 0 for good, 1 for not in vault folder but in same subfolder, 2 for in vault folder but not in the same subfolder within it, 3 for neither in vault folder nor in same subfolder</returns>
 	static int32 CheckForGoodAssetHierarchy(const FAssetData AssetData, TSet<FName>& AllDependencies, TSet<FName>& BadAssets);
 
+	/// <summary>
+	/// Attempt to rename an existing package. Will only change the metadata file.
+	/// </summary>
+	/// <param name="NewPackName">The new name for the package.</param>
+	/// <param name="Meta">Metadata of the file we are renaming.</param>
+	/// <returns>true if successfull, false if failed due to unknown file id or the new name already existing.</returns>
+	static bool RenamePackage(FName NewPackName, FVaultMetadata Meta);
+
 	static void ConvertImageBufferUInt8ToFColor(TArray<uint8>& inputData, TArray<FColor>& outputData);
 	static FName CreateUniquePackageFilename(int length = 16);
 	static FVaultMetadata FindMetadataByPackName(FName PackName);
+
 private:
 
 	static void UpdateSystemMeta(FVaultMetadata& Metadata);

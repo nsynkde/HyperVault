@@ -11,6 +11,8 @@
 typedef TSharedPtr<FTagFilteringItem> FTagFilteringItemPtr;
 typedef TSharedPtr<FDeveloperFilteringItem> FDeveloperFilteringItemPtr;
 
+
+
 class VAULT_API SLoaderWindow : public SCompoundWidget
 {
 	SLATE_BEGIN_ARGS(SLoaderWindow) {}
@@ -134,8 +136,8 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 
 	void RefreshLibrary();
 
-	// Bound to Static delegate in Asset Publisher, so we can update when user pushes a new asset
-	void OnNewAssetPublished();
+	// Bound to Static delegate in Asset Publisher, so we can update when user pushes a new asset or updates an existing one
+	void OnAssetUpdateHappened();
 
 private:
 	int32 LastSearchTextLength;

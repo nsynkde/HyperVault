@@ -13,6 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogVault, Log, All);
 
 DECLARE_DELEGATE_OneParam(FExportAssetDelegate, FAssetData&);
 DECLARE_DELEGATE_OneParam(FUpdateAssetDelegate, FVaultMetadata&);
+DECLARE_DELEGATE(FAssetWasUpdated);
 
 class FToolBarBuilder;
 class FMenuBuilder;
@@ -25,6 +26,9 @@ public:
 	FExportAssetDelegate OnAssetForExportChosen;
 	// Delegate when asset should be updated (e.g. selected from the loader window)
 	FUpdateAssetDelegate OnAssetForUpdateChosen;
+	// Delegate when an asset has been updated within the vault (currently only for renaming
+	FAssetWasUpdated OnAssetWasUpdated;
+
 
 	/** IModuleInterface implementation */
 	virtual void StartupModule() override;
@@ -45,6 +49,10 @@ public:
 	// Holder for all Meta files found during a file search. This is a cached version gathered on showing the ui, and can be updated with the RefreshAvailableFiles() function of the loader window.
 	TArray<FVaultMetadata> MetaFilesCache;
 	void UpdateMetaFilesCache();
+
+	void HandleRenameAsset();
+
+	TSharedPtr<class FUICommandList> PluginCommands;
 	
 private:
 
@@ -54,7 +62,6 @@ private:
 
 	TSharedRef<SDockTab> CreateVaultMajorTab(const FSpawnTabArgs& TabSpawnArgs);
 
-	TSharedPtr<class FUICommandList> PluginCommands;
 
 	UAssetPublisher* AssetPublisherInstance;
 

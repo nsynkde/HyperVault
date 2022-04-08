@@ -3,7 +3,6 @@
 #include "Vault.h"
 
 #include "VaultTypes.h"
-#include "VaultStyle.h"
 #include "Misc/MessageDialog.h"
 #include "Framework/MultiBox/MultiBoxBuilder.h"
 #include "SVaultRootPanel.h"
@@ -12,6 +11,8 @@
 #include "SPublisherWindow.h"
 #include "AssetPublisher.h"
 #include "LevelEditor.h"
+#include "VaultStyle.h"
+#include "VaultCommands.h"
 
 #include "HAL/PlatformProcess.h"
 #include "Misc/Paths.h"
@@ -27,31 +28,6 @@ void* FVaultModule::LibHandle = nullptr;
 
 #define LOCTEXT_NAMESPACE "FVaultModule"
 DEFINE_LOG_CATEGORY(LogVault);
-
-class FVaultCommands : public TCommands<FVaultCommands>
-{
-public:
-
-	FVaultCommands()
-		: TCommands<FVaultCommands>(
-			TEXT("Vault"),
-			LOCTEXT("Vault", "Vault Plugin"),
-			NAME_None,
-			FVaultStyle::GetStyleSetName())
-	{}
-
-	virtual void RegisterCommands() override;
-	TSharedPtr< FUICommandInfo > PluginAction;
-	TSharedPtr<FUICommandInfo> VaultExportAsset;
-};
-
-
-// Create and Register our Commands. We only use the one so no need for a separate cpp/h file.
-void FVaultCommands::RegisterCommands()
-{
-	UI_COMMAND(PluginAction, "Vault", "Open the Vault", EUserInterfaceActionType::Button, FInputGesture());
-	UI_COMMAND(VaultExportAsset, "Export to Vault", "Open the Vault user interface to export the selected asset to the vault.", EUserInterfaceActionType::Button, FInputChord());
-}
 
 
 void FVaultModule::StartupModule()
@@ -76,6 +52,11 @@ void FVaultModule::StartupModule()
 	PluginCommands->MapAction(
 		FVaultCommands::Get().PluginAction,
 		FExecuteAction::CreateRaw(this, &FVaultModule::SpawnOperationsTab),
+		FCanExecuteAction());
+
+	PluginCommands->MapAction(
+		FVaultCommands::Get().Rename,
+		FExecuteAction::CreateRaw(this, &FVaultModule::HandleRenameAsset),
 		FCanExecuteAction());
 	
 	// Store a Ref to the Level Editor.
@@ -200,6 +181,11 @@ bool FVaultModule::LoadDependency(const FString& Dir, const FString& Name, void*
 void FVaultModule::UpdateMetaFilesCache()
 {
 	MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
+}
+
+void FVaultModule::HandleRenameAsset()
+{
+	UE_LOG(LogVault, Display, TEXT("Hello?"));
 }
 
 void FVaultModule::AddToolbarExtension(FToolBarBuilder& Builder)
