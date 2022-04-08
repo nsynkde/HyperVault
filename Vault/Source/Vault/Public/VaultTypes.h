@@ -94,3 +94,11 @@ struct FDeveloperFilteringItem
 	bool bFilterflag;
 	int UseCount;
 };
+
+UENUM()
+enum SortingTypes
+{
+	Filename	UMETA(DisplayName = "Filename"),
+	CreationDate UMETA(DisplayName = "Creation Date"),
+	ModificationDate UMETA(DisplayName = "Modification Date")
+};

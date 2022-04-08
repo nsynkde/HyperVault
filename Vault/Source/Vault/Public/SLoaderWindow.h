@@ -117,6 +117,10 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 
 	void UpdateFilteredAssets();
 
+	TEnumAsByte<SortingTypes> ActiveSortingType;
+
+	void SortFilteredAssets(TEnumAsByte<SortingTypes> SortingType, bool Reverse = false);
+
 	TArray<TSharedPtr<FVaultMetadata>> FilteredAssetItems;
 
 	TSharedPtr<STileView<TSharedPtr<FVaultMetadata>>> TileView;

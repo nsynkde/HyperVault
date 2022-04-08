@@ -158,6 +158,10 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 	PopulateTagArray();
 	PopulateDeveloperNameArray();
 
+	ActiveSortingType = SortingTypes::Filename;
+
+	SortFilteredAssets(ActiveSortingType);
+
 	LastSearchTextLength = 0;
 
 	// Bind to our publisher so we can refresh automatically when the user publishes an asset (they wont need to import it, but its a visual feedback for the user to check it appeared in the library
@@ -1015,6 +1019,30 @@ void SLoaderWindow::UpdateFilteredAssets()
 
 }
 
+void SLoaderWindow::SortFilteredAssets(TEnumAsByte<SortingTypes> SortingType, bool Reverse)
+{
+	switch (SortingType) {
+	case SortingTypes::Filename : 
+		FilteredAssetItems.Sort([&](const TSharedPtr<FVaultMetadata>& a, const TSharedPtr<FVaultMetadata>& b) 
+		{
+			return Reverse ? a->PackName > b->PackName : a->PackName < b->PackName;
+		});
+		break;
+	case SortingTypes::CreationDate:
+		FilteredAssetItems.Sort([&](const TSharedPtr<FVaultMetadata>& a, const TSharedPtr<FVaultMetadata>& b) 
+			{
+			return Reverse ? a->CreationDate < b->CreationDate : a->CreationDate > b->CreationDate;
+		});
+		break;
+	case SortingTypes::ModificationDate:
+		FilteredAssetItems.Sort([&](const TSharedPtr<FVaultMetadata>& a, const TSharedPtr<FVaultMetadata>& b) 
+			{
+			return Reverse ? a->LastModified < b->LastModified : a->LastModified > b->LastModified;
+		});
+		break;
+	}
+}
+
 void SLoaderWindow::OnThumbnailSliderValueChanged(float Value)
 {
 	TileUserScale = Value;
@@ -1046,6 +1074,7 @@ void SLoaderWindow::RefreshLibrary()
 	//SearchBox->AdvanceSearch//
 	//TileView->RebuildList();
 	UpdateFilteredAssets();
+	SortFilteredAssets(ActiveSortingType);
 }
 
 void SLoaderWindow::OnAssetUpdateHappened()
