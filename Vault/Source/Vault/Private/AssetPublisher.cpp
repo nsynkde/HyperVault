@@ -62,7 +62,7 @@ bool UAssetPublisher::PackageSelected(TSet<FString> PackageObjects, FVaultMetada
 	const FString PackFilePath = Quote + (Root / Filename) + Quote;
 	
 	// Convert String to parsable command. Ensures path is wrapped in quotes in case of spaces in name
-	const FString Command = FString::Printf(TEXT("%s -create=%s -compress"), *PackFilePath, *TextDocFull);
+	const FString Command = FString::Printf(TEXT("%s -create=%s -compressed"), *PackFilePath, *TextDocFull);
 	SubPackageTask.EnterProgressFrame(0.2f);
 	UE_LOG(LogVault, Display, TEXT("Running Pack Command: %s"), *Command);
 	bool bRanPak = ExecuteUnrealPak(*Command);

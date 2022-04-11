@@ -1130,6 +1130,11 @@ void SLoaderWindow::SortFilteredAssets(TEnumAsByte<SortingTypes> SortingType, bo
 	}
 }
 
+void SLoaderWindow::SortFilteredAssets()
+{
+	SortFilteredAssets(ActiveSortingType, bSortingReversed);
+}
+
 void SLoaderWindow::OnThumbnailSliderValueChanged(float Value)
 {
 	TileUserScale = Value;
@@ -1178,11 +1183,13 @@ void SLoaderWindow::ModifyActiveTagFilters(FString TagModified, bool bFilterThis
 		// Push our Active Tag into our Set of Tags currently being searched
 		ActiveTagFilters.Add(TagModified);
 		UpdateFilteredAssets();
+		SortFilteredAssets();
 		return;
 	}
 
 	ActiveTagFilters.Remove(TagModified);
 	UpdateFilteredAssets();
+	SortFilteredAssets();
 }
 
 void SLoaderWindow::ModifyActiveDevFilters(FName DevModified, bool bFilterThis)
@@ -1193,11 +1200,13 @@ void SLoaderWindow::ModifyActiveDevFilters(FName DevModified, bool bFilterThis)
 	{
 		ActiveDevFilters.Add(DevModified);
 		UpdateFilteredAssets();
+		SortFilteredAssets();
 		return;
 	}
 
 	ActiveDevFilters.Remove(DevModified);
 	UpdateFilteredAssets();
+	SortFilteredAssets();
 }
 
 #undef LOCTEXT_NAMESPACE
