@@ -63,6 +63,13 @@ TSharedRef< FSlateStyleSet > FVaultStyle::Create()
 	Style->Set(("Vault.Icon128px"), new IMAGE_BRUSH(TEXT("Icon128"), Icon128x128));
 	Style->Set(("Vault.Icon512px"), new IMAGE_BRUSH(TEXT("Icon512"), Icon512x512));
 
+	Style->Set(("UpArrow"), new IMAGE_BRUSH(TEXT("SortingUp"), Icon32x32));
+	Style->Set(("DownArrow"), new IMAGE_BRUSH(TEXT("SortingDown"), Icon32x32));
+	Style->Set(("Empty"), new IMAGE_BRUSH(TEXT("Empty"), Icon32x32));
+	Style->Set(("Sorting"), new IMAGE_BRUSH(TEXT("Sorting"), Icon32x32));
+
+	Style->Set(("Refresh"), new IMAGE_BRUSH(TEXT("Refresh"), Icon32x32));
+
 	Style->Set("MetaTitleText", FTextBlockStyle()
 		.SetFont(DEFAULT_FONT("Fonts/Roboto - Regular", 12.f))
 		.SetColorAndOpacity(FLinearColor(FLinearColor::White))
@@ -71,7 +78,7 @@ TSharedRef< FSlateStyleSet > FVaultStyle::Create()
 
 	// Set up a style for our asset search box
 	const FEditableTextBoxStyle AssetSearchBox = FEditableTextBoxStyle()
-		.SetPadding(FMargin(0.f, 8));
+		.SetPadding(FMargin(8.f, 8.f));
 
 	// Style Set for our Asset Search bar. Its bigger than the default design
 	Style->Set("AssetSearchBar", FSearchBoxStyle()

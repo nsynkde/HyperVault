@@ -46,13 +46,15 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 
 	// // Create the Developer Filter Widget. Bound to the GenerateTile Event
 	TSharedRef<ITableRow> MakeDeveloperFilterViewWidget(FDeveloperFilteringItemPtr Entry, const TSharedRef<STableViewBase>& OwnerTable);
+	// ---- End Tables ----- //
 
 	void OnAssetTileSelectionChanged(TSharedPtr<FVaultMetadata> InItem, ESelectInfo::Type SelectInfo);
 
 	void OnAssetTileDoubleClicked(TSharedPtr<FVaultMetadata> InItem);
 
 	TSharedPtr<SWidget> OnAssetTileContextMenuOpened();
-	// ---- End Tables ----- //
+
+	TSharedRef<SWidget> OnSortingOptionsMenuOpened();
 
 	
 	// ---- Thumbnail Scale System ---- //
@@ -147,6 +149,8 @@ private:
 	int32 LastSearchTextLength;
 
 	bool IsConnected;
+
+	bool bSortingReversed;
 
 public:
 

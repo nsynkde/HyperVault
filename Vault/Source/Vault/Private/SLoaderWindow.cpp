@@ -20,6 +20,9 @@
 #include <AssetRegistryModule.h>
 #include "ContentBrowserModule.h"
 #include "IContentBrowserSingleton.h"
+#include "EditorStyleSet.h"
+
+#include "Widgets/Layout/SScalebox.h"
 
 
 #define LOCTEXT_NAMESPACE "SVaultLoader"
@@ -159,8 +162,9 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 	PopulateDeveloperNameArray();
 
 	ActiveSortingType = SortingTypes::Filename;
+	bSortingReversed = false;
 
-	SortFilteredAssets(ActiveSortingType);
+	SortFilteredAssets(ActiveSortingType, bSortingReversed);
 
 	LastSearchTextLength = 0;
 
@@ -299,7 +303,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 							SNew(SHorizontalBox)
 							+ SHorizontalBox::Slot()
 							.FillWidth(1)
-							.Padding(FMargin(0,3,0,0))
+							.Padding(FMargin(0,0,0,0))
 							[
 								// Center content area
 								SAssignNew(SearchBox, SSearchBox)
@@ -331,6 +335,50 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 									[
 										SNew(STextBlock)
 										.Text(LOCTEXT("StrictSearchCheckBox", "Strict Search"))
+									]
+								]
+							]
+
+							+ SHorizontalBox::Slot()
+							.Padding(FMargin(5.f, 0.f, 5.f, 0.f))
+							.AutoWidth()
+							[
+								SNew(SButton)
+								//.Text(LOCTEXT("RefreshLibraryScreenBtnLbl", "Refresh Library"))
+								.ButtonStyle(FEditorStyle::Get(), "FlatButton")
+								.OnClicked(this, &SLoaderWindow::OnRefreshLibraryClicked)
+								.Content()
+								[
+									SNew(SScaleBox)
+									.Stretch(EStretch::ScaleToFitX)
+									.Content()
+									[
+										SNew(SImage)
+										.ColorAndOpacity(FLinearColor::White)
+										.Image(FVaultStyle::Get().GetBrush("Refresh"))
+									]
+								]
+							]
+
+							+ SHorizontalBox::Slot()
+							.Padding(FMargin(5.f, 0.f, 5.f, 0.f))
+							.AutoWidth()
+							[
+								SNew(SComboButton)
+								.ComboButtonStyle(FEditorStyle::Get(), "GenericFilters.ComboButtonStyle")
+								.ButtonStyle(FEditorStyle::Get(), "FlatButton")
+								.ForegroundColor(FLinearColor::White)
+								.OnGetMenuContent(this, &SLoaderWindow::OnSortingOptionsMenuOpened)
+								.HasDownArrow(false)
+								.ButtonContent()
+								[
+									SNew(SScaleBox)
+									.Stretch(EStretch::ScaleToFitX)
+									.Content()
+									[
+										SNew(SImage)
+										.ColorAndOpacity(FSlateColor::UseForeground())
+										.Image(FVaultStyle::Get().GetBrush("Sorting"))
 									]
 								]
 							]
@@ -391,13 +439,6 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 						.AutoHeight()
 						[
 							SNew(SHorizontalBox)
-							+ SHorizontalBox::Slot()
-							.AutoWidth()
-							[
-								SNew(SButton)
-								.Text(LOCTEXT("RefreshLibraryScreenBtnLbl", "Refresh Library"))
-								.OnClicked(this, &SLoaderWindow::OnRefreshLibraryClicked)
-							]
 							+ SHorizontalBox::Slot()
 								[
 									SNew(SSpacer)
@@ -670,6 +711,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 				FCanExecuteAction(),
 					FGetActionCheckState(),
 					FIsActionButtonVisible()));
+
 		// TODO understand why the fuck the command can't execute its function. Neither if its mapped in the VaultModule or in here above...
 		//MenuBuilder.AddMenuEntry(FVaultCommands::Get().Rename, NAME_None, LOCTEXT("ACM_RenameAssetLabel", "Rename Asset"), FText::GetEmpty(), FSlateIcon());
 
@@ -727,6 +769,49 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 
 	return MenuBuilder.MakeWidget();
 
+}
+
+TSharedRef<SWidget> SLoaderWindow::OnSortingOptionsMenuOpened()
+{
+	FMenuBuilder MenuBuilder(true, nullptr, nullptr, true);
+
+	static const FName FilterSelectionHook("SortingOptionsMenu");
+
+	MenuBuilder.BeginSection(FilterSelectionHook, LOCTEXT("SortingOptionsMenuLabel", "Sorting Option"));
+	{
+		MenuBuilder.AddMenuEntry(LOCTEXT("SOM_FilenameLabel", "Package Name"), FText::GetEmpty(), ActiveSortingType == SortingTypes::Filename ? FSlateIcon("VaultStyle", bSortingReversed ? "UpArrow" : "DownArrow") : FSlateIcon("VaultStyle", "Empty"),
+			FUIAction(FExecuteAction::CreateLambda([this]()
+				{
+					bSortingReversed = ActiveSortingType == SortingTypes::Filename ? !bSortingReversed : false;
+					ActiveSortingType = SortingTypes::Filename;
+					RefreshLibrary();
+				}),
+				FCanExecuteAction(),
+				FGetActionCheckState(),
+				FIsActionButtonVisible()));
+		MenuBuilder.AddMenuEntry(LOCTEXT("SOM_CreationDateLabel", "Creation Date"), FText::GetEmpty(), ActiveSortingType == SortingTypes::CreationDate ? FSlateIcon("VaultStyle", bSortingReversed ? "UpArrow" : "DownArrow") : FSlateIcon("VaultStyle", "Empty"),
+			FUIAction(FExecuteAction::CreateLambda([this]()
+				{
+					bSortingReversed = ActiveSortingType == SortingTypes::CreationDate ? !bSortingReversed : false;
+					ActiveSortingType = SortingTypes::CreationDate;
+					RefreshLibrary();
+				}),
+				FCanExecuteAction(),
+				FGetActionCheckState(),
+				FIsActionButtonVisible()));
+		MenuBuilder.AddMenuEntry(LOCTEXT("SOM_ModifiedDateLabel", "Modification Date"), FText::GetEmpty(), ActiveSortingType == SortingTypes::ModificationDate ? FSlateIcon("VaultStyle", bSortingReversed ? "UpArrow" : "DownArrow") : FSlateIcon("VaultStyle", "Empty"),
+			FUIAction(FExecuteAction::CreateLambda([this]()
+				{
+					bSortingReversed = ActiveSortingType == SortingTypes::ModificationDate ? !bSortingReversed : false;
+					ActiveSortingType = SortingTypes::ModificationDate;
+					RefreshLibrary();
+				}),
+				FCanExecuteAction(),
+				FGetActionCheckState(),
+				FIsActionButtonVisible()));
+	}
+
+	return MenuBuilder.MakeWidget();
 }
 
 void SLoaderWindow::OnSearchBoxChanged(const FText& inSearchText)
@@ -1021,6 +1106,8 @@ void SLoaderWindow::UpdateFilteredAssets()
 
 void SLoaderWindow::SortFilteredAssets(TEnumAsByte<SortingTypes> SortingType, bool Reverse)
 {
+	bSortingReversed = Reverse;
+	ActiveSortingType = SortingType;
 	switch (SortingType) {
 	case SortingTypes::Filename : 
 		FilteredAssetItems.Sort([&](const TSharedPtr<FVaultMetadata>& a, const TSharedPtr<FVaultMetadata>& b) 
@@ -1074,7 +1161,7 @@ void SLoaderWindow::RefreshLibrary()
 	//SearchBox->AdvanceSearch//
 	//TileView->RebuildList();
 	UpdateFilteredAssets();
-	SortFilteredAssets(ActiveSortingType);
+	SortFilteredAssets(ActiveSortingType, bSortingReversed);
 }
 
 void SLoaderWindow::OnAssetUpdateHappened()
