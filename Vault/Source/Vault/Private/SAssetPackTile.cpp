@@ -16,6 +16,7 @@
 #include "Widgets/Images/SImage.h"
 #include "Widgets/Images/SThrobber.h"
 #include "AssetPublisher.h"
+#include "EditorFontGlyphs.h"
 
 #include "Internationalization/BreakIterator.h"
 
@@ -87,7 +88,7 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 			SNew(SHorizontalBox)
 			+ SHorizontalBox::Slot()
 			.HAlign(HAlign_Left)
-			.AutoWidth()
+			.FillWidth(0.8f)
 			.Padding(FMargin(8.0f, 11.0f, 3.0f, 0.0f))
 			[
 				SAssignNew(InlineRenameWidget, SInlineEditableTextBlock)
@@ -101,6 +102,70 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 				.Justification(ETextJustify::Center)
 				.LineBreakPolicy(FBreakIterator::CreateCamelCaseBreakIterator())
 				.ModiferKeyForNewLine(EModifierKey::None)
+			]
+			
+			+ SHorizontalBox::Slot()
+			.HAlign(HAlign_Right)
+			.AutoWidth()
+			.Padding(FMargin(3.0f, 5.0f, 8.0f, 0.0f))
+			[
+				SNew(STextBlock)
+				.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
+				.Justification(ETextJustify::Right)
+				.ToolTipText_Lambda([this]
+					{
+						switch (AssetItem->HierarchyBadness)
+						{
+						case 0:
+							return FText::FromString(TEXT("Asset has good hierarchy!"));
+							break;
+						case 1:
+							return FText::FromString(TEXT("Asset will not be imported in the vault folder, not all its dependencies will be in the same subfolder as the asset!"));
+							break;
+						case 2:
+							return FText::FromString(TEXT("Asset and all its dependencies will be imported in the vault folder, but won't be in the same subfolder within the vault!"));
+							break;
+						case 3:
+							return FText::FromString(TEXT("Asset will be imported in the vault folder, but dependencies will be located outside of the vault folder."));
+							break;
+						case 4:
+							return FText::FromString(TEXT("Asset will be imported outside of the vault folder and will have dependencies in different subfolders!"));
+							break;
+						default:
+							return FText::FromString(TEXT("Asset has unknown levels of hierarchy badness. This could be very bad..."));
+							break;
+						}
+					})
+				.Visibility_Lambda([this]
+					{
+						if (AssetItem->HierarchyBadness == 0)
+						{
+							return EVisibility::Collapsed;
+						}
+						else
+						{
+							return EVisibility::Visible;
+						}
+					})
+				.Text_Lambda([this]
+					{
+						return FEditorFontGlyphs::Exclamation_Triangle;
+					})
+				.ColorAndOpacity_Lambda([this]
+					{
+						if (AssetItem->HierarchyBadness == 0)
+						{
+							return FLinearColor::Green;
+						}
+						else if (AssetItem->HierarchyBadness > 0 && AssetItem->HierarchyBadness < 3)
+						{
+							return FLinearColor::Yellow;
+						}
+						else
+						{
+							return FLinearColor::Red;
+						}
+					})
 			]
 		];
 		
@@ -187,6 +252,7 @@ void SAssetTileItem::HandleNameCommitted(const FText& NewText, ETextCommit::Type
 	RenameMetaData.LastModified = FDateTime::UtcNow();
 	RenameMetaData.Tags = AssetItem->Tags;
 	RenameMetaData.MachineID = AssetItem->MachineID;
+	RenameMetaData.HierarchyBadness = AssetItem->HierarchyBadness;
 	RenameMetaData.ObjectsInPack = AssetItem->ObjectsInPack;
 
 	if (UAssetPublisher::RenamePackage(FName(NewText.ToString()), RenameMetaData))

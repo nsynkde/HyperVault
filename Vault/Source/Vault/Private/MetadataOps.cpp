@@ -123,6 +123,9 @@ FVaultMetadata FMetadataOps::ParseMetaJsonToVaultMetadata(TSharedPtr<FJsonObject
 
 	// System Info 
 	Metadata.MachineID = MetaFile->GetStringField("MachineID");
+
+	// Hierarchy Badness
+	Metadata.HierarchyBadness = MetaFile->GetNumberField("HierarchyBadness");
 	
 	// Objects List
 	TArray<TSharedPtr<FJsonValue>> ListOfObjects = MetaFile->GetArrayField("ObjectsInPack");
@@ -159,6 +162,9 @@ TSharedPtr<FJsonObject> FMetadataOps::ParseMetadataToJson(FVaultMetadata Metadat
 
 	// Sys info
 	MetaJson->SetStringField("MachineID", Metadata.MachineID);
+
+	// Hierarchy Badness
+	MetaJson->SetNumberField("HierarchyBadness", Metadata.HierarchyBadness);
 
 	// Objects
 	TArray<TSharedPtr<FJsonValue>> ObjectsToWrite;
