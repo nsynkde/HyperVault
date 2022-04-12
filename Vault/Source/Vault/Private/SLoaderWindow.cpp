@@ -290,15 +290,16 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 
 				// Center Area!
 				+SSplitter::Slot()
-				.Value(0.6f)
-				[
-					SNew(SBorder)
-					.BorderImage(FEditorStyle::GetBrush("ToolPanel.GroupBorder"))
+					.Value(0.6f)
+					[
+						SNew(SBorder)
+						.BorderImage(FEditorStyle::GetBrush("ToolPanel.GroupBorder"))
 					.Padding(FMargin(4.0f, 4.0f))
 					[
 						SNew(SVerticalBox)
 						+ SVerticalBox::Slot()
-						.AutoHeight()
+						.FillHeight(0.05)
+						//.AutoHeight()
 						[
 							SNew(SHorizontalBox)
 							+ SHorizontalBox::Slot()
@@ -315,7 +316,6 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.IsEnabled_Lambda([this] {
 									return IsConnected;
 								})
-								.Style(FVaultStyle::Get(), "AssetSearchBar")
 								.AddMetaData<FTagMetaData>(FTagMetaData(TEXT("AssetSearch")))
 							]
 
@@ -350,7 +350,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.Content()
 								[
 									SNew(SScaleBox)
-									.Stretch(EStretch::ScaleToFitX)
+									.Stretch(EStretch::ScaleToFit)
 									.Content()
 									[
 										SNew(SImage)
@@ -373,7 +373,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.ButtonContent()
 								[
 									SNew(SScaleBox)
-									.Stretch(EStretch::ScaleToFitX)
+									.Stretch(EStretch::ScaleToFit)
 									.Content()
 									[
 										SNew(SImage)
@@ -822,6 +822,7 @@ void SLoaderWindow::OnSearchBoxChanged(const FText& inSearchText)
 	if (inSearchText.IsEmpty())
 	{
 		UpdateFilteredAssets();
+		SortFilteredAssets();
 		return;
 	}
 	if (inSearchText.ToString().Len() < LastSearchTextLength)
@@ -866,6 +867,7 @@ void SLoaderWindow::OnSearchBoxChanged(const FText& inSearchText)
 	}
 
 	FilteredAssetItems = SearchMatchingEntries;
+	SortFilteredAssets();
 	TileView->RebuildList();
 	TileView->ScrollToTop();
 
@@ -1130,6 +1132,11 @@ void SLoaderWindow::SortFilteredAssets(TEnumAsByte<SortingTypes> SortingType, bo
 	}
 }
 
+void SLoaderWindow::SortFilteredAssets()
+{
+	SortFilteredAssets(ActiveSortingType, bSortingReversed);
+}
+
 void SLoaderWindow::OnThumbnailSliderValueChanged(float Value)
 {
 	TileUserScale = Value;
@@ -1178,11 +1185,13 @@ void SLoaderWindow::ModifyActiveTagFilters(FString TagModified, bool bFilterThis
 		// Push our Active Tag into our Set of Tags currently being searched
 		ActiveTagFilters.Add(TagModified);
 		UpdateFilteredAssets();
+		SortFilteredAssets();
 		return;
 	}
 
 	ActiveTagFilters.Remove(TagModified);
 	UpdateFilteredAssets();
+	SortFilteredAssets();
 }
 
 void SLoaderWindow::ModifyActiveDevFilters(FName DevModified, bool bFilterThis)
@@ -1193,11 +1202,13 @@ void SLoaderWindow::ModifyActiveDevFilters(FName DevModified, bool bFilterThis)
 	{
 		ActiveDevFilters.Add(DevModified);
 		UpdateFilteredAssets();
+		SortFilteredAssets();
 		return;
 	}
 
 	ActiveDevFilters.Remove(DevModified);
 	UpdateFilteredAssets();
+	SortFilteredAssets();
 }
 
 #undef LOCTEXT_NAMESPACE

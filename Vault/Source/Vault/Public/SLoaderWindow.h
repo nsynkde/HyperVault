@@ -122,6 +122,7 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 	TEnumAsByte<SortingTypes> ActiveSortingType;
 
 	void SortFilteredAssets(TEnumAsByte<SortingTypes> SortingType, bool Reverse = false);
+	void SortFilteredAssets();
 
 	TArray<TSharedPtr<FVaultMetadata>> FilteredAssetItems;
 
