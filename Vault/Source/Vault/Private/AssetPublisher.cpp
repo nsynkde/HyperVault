@@ -270,6 +270,7 @@ FReply UAssetPublisher::TryPackageAsset(FString FileId, FAssetData ExportAsset, 
 	TSet<FName> AssetsToProcess = { AssetPath };
 	TSet<FName> BadAssets = {};
 	int32 HierarchyBadness = CheckForGoodAssetHierarchy(ExportAsset, AssetsToProcess, BadAssets);
+	AssetPublishMetadata.HierarchyBadness = HierarchyBadness;
 	if (HierarchyBadness != 0)
 	{
 		FText ErrorMsg;

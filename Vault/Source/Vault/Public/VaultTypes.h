@@ -25,6 +25,16 @@ public:
 	FString MachineID;
 	TSet<FString> ObjectsInPack;
 
+	/// <summary>
+	/// The higher the value the worse it is.
+	/// 0 for good hierarchy
+	/// 1 for asset outside of the vault, but all dependencies are in the same subfolder
+	/// 2 asset and all dependencies are in the vault, but not in the same subfolder within it
+	/// 3 asset in the vault, but dependencies are not in the vault
+	/// 4 asset is not in the vault and dependencies are not in the same subfolder as the asset
+	/// </summary>
+	int32 HierarchyBadness;
+
 	/** Get the event fired whenever a rename is requested */
 	FSimpleDelegate& OnRenameRequested();
 

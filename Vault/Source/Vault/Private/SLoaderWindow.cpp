@@ -700,6 +700,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 						AssetPublishMetadata.CreationDate = SelectedAsset->CreationDate;
 						AssetPublishMetadata.LastModified = FDateTime::UtcNow();
 						AssetPublishMetadata.Tags = SelectedAsset->Tags;
+						AssetPublishMetadata.HierarchyBadness = SelectedAsset->HierarchyBadness;
 						AssetPublishMetadata.ObjectsInPack = SelectedAsset->ObjectsInPack;
 
 						FVaultModule::Get().OnAssetForUpdateChosen.ExecuteIfBound(AssetPublishMetadata);
