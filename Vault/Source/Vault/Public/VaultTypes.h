@@ -5,6 +5,17 @@
 #include "CoreMinimal.h"
 #include "Engine/Texture2DDynamic.h"
 
+UENUM()
+enum FCategory
+{
+	ThreeD		UMETA(DisplayName = "3D"),
+	Material	UMETA(DisplayName = "Material"),
+	FX			UMETA(DisplayName = "FX"),
+	HDRI		UMETA(DisplayName = "HDRI"),
+	Environment	UMETA(DisplayName = "Environment"),
+	Unknown		UMETA(DisplayName = "Unknown")
+};
+
 // Any metadata required for your assets can be added here.
 class VAULT_API FVaultMetadata
 {
@@ -16,6 +27,7 @@ public:
 	FName FileId;
 	FString Description;
 	TSet<FString> Tags;
+	TEnumAsByte<FCategory> Category;
 	TSoftObjectPtr<UTexture2DDynamic> Thumbnail;
 
 	FDateTime CreationDate;
@@ -41,6 +53,10 @@ public:
 	/** Get the event fired whenever a rename is canceled */
 	FSimpleDelegate& OnRenameCanceled();
 
+	static FString CategoryToString(FCategory InCategory);
+
+	static FCategory StringToCategory(FString InString);
+
 protected:
 
 	FSimpleDelegate RenameRequestedEvent;
@@ -59,6 +75,7 @@ public:
 		LastModified = FDateTime::UtcNow();
 		RelativePath = FString();
 		MachineID = FString();
+		Category = FCategory::Unknown;
 	}
 
 	bool IsMetaValid()

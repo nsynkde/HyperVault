@@ -48,6 +48,7 @@ public:
 	static void ConvertImageBufferUInt8ToFColor(TArray<uint8>& inputData, TArray<FColor>& outputData);
 	static FName CreateUniquePackageFilename(int length = 16);
 	static FVaultMetadata FindMetadataByPackName(FName PackName);
+	static FCategory GetAssetCategory(FAssetData AssetData);
 
 private:
 

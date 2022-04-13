@@ -251,6 +251,7 @@ void SAssetTileItem::HandleNameCommitted(const FText& NewText, ETextCommit::Type
 	RenameMetaData.CreationDate = AssetItem->CreationDate;
 	RenameMetaData.LastModified = FDateTime::UtcNow();
 	RenameMetaData.Tags = AssetItem->Tags;
+	RenameMetaData.Category = AssetItem->Category;
 	RenameMetaData.MachineID = AssetItem->MachineID;
 	RenameMetaData.HierarchyBadness = AssetItem->HierarchyBadness;
 	RenameMetaData.ObjectsInPack = AssetItem->ObjectsInPack;

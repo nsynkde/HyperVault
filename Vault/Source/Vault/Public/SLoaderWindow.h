@@ -152,6 +152,7 @@ private:
 	bool IsConnected;
 
 	bool bSortingReversed;
+	bool bHideBadHierarchyAssets;
 
 public:
 

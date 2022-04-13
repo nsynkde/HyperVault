@@ -33,6 +33,9 @@ class VAULT_API SPublisherWindow : public SCompoundWidget
 	// Create Thumbnail from a File
 	FReply OnCaptureImageFromFile();
 
+	// Create Thumbnail from the Assets thumbnail in the content browser
+	FReply OnCaptureImageFromAsset();
+
 	// Viewport Shot, whether captured or loaded. Passed into our SlateBrush, this ref is mainly for checking streaming status
 	UTexture2D* ShotTexture;
 

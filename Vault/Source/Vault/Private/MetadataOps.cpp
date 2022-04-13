@@ -103,6 +103,9 @@ FVaultMetadata FMetadataOps::ParseMetaJsonToVaultMetadata(TSharedPtr<FJsonObject
 	Metadata.FileId = FName(*MetaFile->GetStringField("FileId"));
 	Metadata.Description = MetaFile->GetStringField("Description");
 
+	// Category
+	Metadata.Category = FVaultMetadata::StringToCategory(*MetaFile->GetStringField("Category"));
+
 	// Tags
 	TArray<TSharedPtr<FJsonValue>> TagValues = MetaFile->GetArrayField("Tags");
 	TSet<FString> Tags;
@@ -111,6 +114,7 @@ FVaultMetadata FMetadataOps::ParseMetaJsonToVaultMetadata(TSharedPtr<FJsonObject
 		Tags.Add(TagRaw->AsString());
 	}
 	Metadata.Tags = Tags;
+
 
 	// Dates
 	FDateTime CreationDate;
@@ -147,6 +151,9 @@ TSharedPtr<FJsonObject> FMetadataOps::ParseMetadataToJson(FVaultMetadata Metadat
 	MetaJson->SetStringField("PackName", Metadata.PackName.ToString());
 	MetaJson->SetStringField("FileId", Metadata.FileId.ToString());
 	MetaJson->SetStringField("Description", Metadata.Description);
+
+	// Category
+	MetaJson->SetStringField("Category", FVaultMetadata::CategoryToString(Metadata.Category));
 
 	// Tags
 	TArray<TSharedPtr<FJsonValue>> TagsToWrite;

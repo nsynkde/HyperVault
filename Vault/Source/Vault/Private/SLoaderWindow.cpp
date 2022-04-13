@@ -164,6 +164,9 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 	ActiveSortingType = SortingTypes::Filename;
 	bSortingReversed = false;
 
+	// TODO: put this in the settings file and load it.
+	bHideBadHierarchyAssets = false;
+
 	SortFilteredAssets(ActiveSortingType, bSortingReversed);
 
 	LastSearchTextLength = 0;
@@ -266,7 +269,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.FixedWidth(40.0f)
 
 								+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
-								.DefaultLabel(LOCTEXT("TagFilteringTagNameLabel", "Developer"))
+								.DefaultLabel(LOCTEXT("DevFilteringTagNameLabel", "Developer"))
 
 								+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
 								.DefaultLabel(LOCTEXT("TagFilteringCounterLabel", "Used"))
@@ -298,8 +301,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 					[
 						SNew(SVerticalBox)
 						+ SVerticalBox::Slot()
-						.FillHeight(0.05)
-						//.AutoHeight()
+						.AutoHeight()
 						[
 							SNew(SHorizontalBox)
 							+ SHorizontalBox::Slot()
@@ -700,6 +702,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 						AssetPublishMetadata.CreationDate = SelectedAsset->CreationDate;
 						AssetPublishMetadata.LastModified = FDateTime::UtcNow();
 						AssetPublishMetadata.Tags = SelectedAsset->Tags;
+						AssetPublishMetadata.Category = SelectedAsset->Category;
 						AssetPublishMetadata.HierarchyBadness = SelectedAsset->HierarchyBadness;
 						AssetPublishMetadata.ObjectsInPack = SelectedAsset->ObjectsInPack;
 
@@ -776,9 +779,9 @@ TSharedRef<SWidget> SLoaderWindow::OnSortingOptionsMenuOpened()
 {
 	FMenuBuilder MenuBuilder(true, nullptr, nullptr, true);
 
-	static const FName FilterSelectionHook("SortingOptionsMenu");
+	static const FName SortingOptionsHook("SortingOptionsMenu");
 
-	MenuBuilder.BeginSection(FilterSelectionHook, LOCTEXT("SortingOptionsMenuLabel", "Sorting Option"));
+	MenuBuilder.BeginSection(SortingOptionsHook, LOCTEXT("SortingOptionsMenuLabel", "Sorting Option"));
 	{
 		MenuBuilder.AddMenuEntry(LOCTEXT("SOM_FilenameLabel", "Package Name"), FText::GetEmpty(), ActiveSortingType == SortingTypes::Filename ? FSlateIcon("VaultStyle", bSortingReversed ? "UpArrow" : "DownArrow") : FSlateIcon("VaultStyle", "Empty"),
 			FUIAction(FExecuteAction::CreateLambda([this]()
@@ -811,6 +814,34 @@ TSharedRef<SWidget> SLoaderWindow::OnSortingOptionsMenuOpened()
 				FGetActionCheckState(),
 				FIsActionButtonVisible()));
 	}
+	MenuBuilder.EndSection();
+
+
+	static const FName FilterOptionsHook("FilterOptionsMenu");
+
+	MenuBuilder.BeginSection(FilterOptionsHook, LOCTEXT("FilterOptionsMenuLabel", "Filtering Options"));
+	{
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("FOM_HierarchyBadnessLabel", "Hide Assets with bad File Hierarchy"), 
+			FText::GetEmpty(), 
+			FSlateIcon("VaultStyle", "Empty"),
+			FUIAction(
+				FExecuteAction::CreateLambda([this]()
+				{
+					bHideBadHierarchyAssets = !bHideBadHierarchyAssets;
+					RefreshLibrary();
+				}),
+				FCanExecuteAction(),
+				FIsActionChecked::CreateLambda([this]()
+				{
+					return bHideBadHierarchyAssets;
+				}),
+				FIsActionButtonVisible()
+			),
+			NAME_None,
+			EUserInterfaceActionType::ToggleButton);
+	}
+	MenuBuilder.EndSection();
 
 	return MenuBuilder.MakeWidget();
 }
@@ -950,6 +981,16 @@ void SLoaderWindow::ConstructMetadataWidget(TSharedPtr<FVaultMetadata> AssetMeta
 			.Text(FText::Format(LOCTEXT("Meta_LastModifiedLbl", "Last Modified: {0}"), FText::FromString(AssetMeta->LastModified.ToString())))
 		];
 
+	// Category
+	MetadataWidget->AddSlot()
+		.AutoHeight()
+		.Padding(WordPadding)
+		[
+			SNew(STextBlock)
+			.AutoWrapText(true)
+			.Text(FText::Format(LOCTEXT("MetaCategoryLbl", "Category: {0}"), FText::FromString(FVaultMetadata::CategoryToString(AssetMeta->Category))))
+		];
+
 	// Tags List - Header
 	MetadataWidget->AddSlot()
 		.AutoHeight()
@@ -1074,20 +1115,42 @@ void SLoaderWindow::UpdateFilteredAssets()
 	FilteredAssetItems.Empty();
 
 	// Special Condition to check if all boxes are cleared:
-	if (ActiveTagFilters.Num() == 0 && ActiveDevFilters.Num() == 0)
+	if (ActiveTagFilters.Num() == 0 && ActiveDevFilters.Num() == 0 )
 	{
-		PopulateBaseAssetList();
-		TileView->RebuildList();
-		TileView->ScrollToTop();
-		return;
+		if (bHideBadHierarchyAssets == false)
+		{
+			PopulateBaseAssetList();
+			TileView->RebuildList();
+			TileView->ScrollToTop();
+			return;
+		}
+		else 
+		{
+			for (auto Asset : FVaultModule::Get().MetaFilesCache)
+			{
+				if (Asset.HierarchyBadness <= 0)
+				{
+					FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Asset)));
+				}
+			}
+			TileView->RebuildList();
+			TileView->ScrollToTop();
+			return;
+		}
 	}
 
 	for (auto Asset : FVaultModule::Get().MetaFilesCache)
 	{
+		// Skip this asset if it has bad hierarchy and we are hiding those
+		if (bHideBadHierarchyAssets && Asset.HierarchyBadness > 0)
+		{
+			continue;
+		}
+
 		// Apply all filtered Tags
 		for (auto UserTag : Asset.Tags)
 		{
-			if (ActiveTagFilters.Contains(UserTag))
+			if (ActiveTagFilters.Contains(UserTag) && (ActiveDevFilters.Contains(Asset.Author) || ActiveDevFilters.Num() == 0))
 			{
 				FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Asset)));
 				break;
@@ -1095,7 +1158,7 @@ void SLoaderWindow::UpdateFilteredAssets()
 		}
 
 		// Apply All Developer Tags
-		if (ActiveDevFilters.Contains(Asset.Author))
+		if (ActiveTagFilters.Num() == 0 && ActiveDevFilters.Contains(Asset.Author))
 		{
 			FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Asset)));
 			continue;
