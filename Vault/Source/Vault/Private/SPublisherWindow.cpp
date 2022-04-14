@@ -280,15 +280,15 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 							{
 								if (AssetHierarchyBadness == 0)
 								{
-									return FEditorFontGlyphs::Check_Circle;
+									return FEditorFontGlyphs::Check;
 								}
 								else if (AssetHierarchyBadness > 0 && AssetHierarchyBadness < 3)
 								{
-									return FEditorFontGlyphs::Exclamation_Circle;
+									return FEditorFontGlyphs::Exclamation;
 								}
 								else
 								{
-									return FEditorFontGlyphs::Times_Circle;
+									return FEditorFontGlyphs::Times;
 								}
 							})
 						.ColorAndOpacity_Lambda([this]
@@ -414,7 +414,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 								SNew(STextBlock)
 								.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
 								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
-								.Text(FEditorFontGlyphs::Camera)
+								.Text(FEditorFontGlyphs::Video_Camera)
 							]
 
 							+ SHorizontalBox::Slot()
@@ -423,7 +423,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 							[
 								SNew(STextBlock)
 								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
-								.Text(LOCTEXT("TakeScreenshotLbl", "Capture Viewport"))
+								.Text(LOCTEXT("TakeScreenshotLbl", "From Viewport"))
 							]
 						]
 					]
@@ -442,7 +442,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 								SNew(STextBlock)
 								.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
 								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
-								.Text(FEditorFontGlyphs::File_Image_O)
+								.Text(FEditorFontGlyphs::File)
 
 							]
 							+ SHorizontalBox::Slot()
@@ -470,7 +470,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 								SNew(STextBlock)
 								.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
 								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
-								.Text(FEditorFontGlyphs::Picture_O)
+								.Text(FEditorFontGlyphs::Archive)
 							]
 							+ SHorizontalBox::Slot()
 							.FillWidth(1)
