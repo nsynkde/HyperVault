@@ -1,4 +1,5 @@
 #include "VaultTypes.h"
+#include "Vault.h"
 
 FSimpleDelegate& FVaultMetadata::OnRenameRequested()
 {
@@ -8,6 +9,28 @@ FSimpleDelegate& FVaultMetadata::OnRenameRequested()
 FSimpleDelegate& FVaultMetadata::OnRenameCanceled()
 {
 	return RenameCanceledEvent;
+}
+
+int32 FVaultMetadata::CheckInProjectAndVersion()
+{
+	InProjectVersion = 0;
+	FVaultMetadata LocalAsset;
+	for (FVaultMetadata iAsset : FVaultModule::Get().ImportedMetaFileCache)
+	{
+		if (iAsset.FileId == this->FileId)
+		{
+			LocalAsset = iAsset;
+			break;
+		}
+	}
+
+	if (LocalAsset.IsMetaValid())
+	{
+		if (LocalAsset.LastModified < this->LastModified) InProjectVersion = -1;
+		else if (LocalAsset.LastModified >= this->LastModified) InProjectVersion = 1;
+	}
+
+	return InProjectVersion;
 }
 
 FString FVaultMetadata::CategoryToString(FVaultCategory InCategory)

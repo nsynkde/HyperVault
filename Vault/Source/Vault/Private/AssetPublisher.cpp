@@ -76,6 +76,7 @@ bool UAssetPublisher::PackageSelected(TSet<FString> PackageObjects, FVaultMetada
 	// Metadata Writing
 
 	FMetadataOps::WriteMetadata(Meta);
+	FMetadataOps::CopyMetadataToLocal(Meta);
 	SubPackageTask.EnterProgressFrame(0.2f);
 	OnVaultPackagingCompletedDelegate.ExecuteIfBound();
 

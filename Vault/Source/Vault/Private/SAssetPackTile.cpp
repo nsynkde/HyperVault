@@ -50,36 +50,86 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 		.FillHeight(0.9f)
 		.Padding(FMargin(0.0f, 3.0f, 0.0f, 0.0f))
 		[
-			SNew(SScaleBox)
-			.Stretch(EStretch::ScaleToFit)
+			// Optional Overlay Box to help additional meta later in pipe. 
+			SNew(SOverlay)
+
+			+ SOverlay::Slot()
+			.HAlign(HAlign_Fill)
+			.VAlign(VAlign_Fill)
 			[
-				// Optional Overlay Box to help additional meta later in pipe. 
-				SNew(SOverlay)
-				+SOverlay::Slot()
-				.HAlign(HAlign_Fill)
-				.VAlign(VAlign_Fill)
-				[
+
+				SNew(SScaleBox)
+				.Stretch(EStretch::ScaleToFit)
+				[	
 					ThumbnailWidget
 				]
 			]
+			+SOverlay::Slot()
+			.HAlign(HAlign_Right)
+			.VAlign(VAlign_Top)
+			.Padding(FMargin(32.0f, 8.0f, 20.0f, 32.0f))
+			[
+				SNew(STextBlock)
+				.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
+				.Justification(ETextJustify::Right)
+				.ToolTipText_Lambda([this]
+					{
+						if (AssetItem->InProjectVersion == -1)
+						{
+							return FText::FromString(TEXT("There is a newer version available than the one imported in this project."));
+						}
+						else if (AssetItem->InProjectVersion == 1)
+						{
+							return FText::FromString(TEXT("Imported Asset is up to data (or newer)."));
+						}
+						else
+						{
+							return FText::FromString(TEXT("Asset has not been imported."));
+						}
+					})
+				.Visibility_Lambda([this]
+					{
+						if (AssetItem->InProjectVersion == -1 || AssetItem->InProjectVersion == 1)
+						{
+							return EVisibility::Visible;
+						}
+						else
+						{
+							return EVisibility::Collapsed;
+						}
+					})
+				.Text_Lambda([this]
+					{
+						if (AssetItem->InProjectVersion == -1)
+						{
+							return FEditorFontGlyphs::Info_Circle;
+						}
+						else if (AssetItem->InProjectVersion == 1)
+						{
+							return FEditorFontGlyphs::Check_Circle;
+						}
+						else
+						{
+							return FText();
+						}
+					})
+				.ColorAndOpacity_Lambda([this]
+					{
+						if (AssetItem->InProjectVersion == -1)
+						{
+							return FLinearColor::Yellow;
+						}
+						else if (AssetItem->InProjectVersion == 1)
+						{
+							return FLinearColor::Green;
+						}
+						else
+						{
+							return FLinearColor::Green;
+						}
+					})
+			]
 		]
-
-		// File Name
-		/*+SVerticalBox::Slot()
-		.AutoHeight()
-		[
-			SNew(SHorizontalBox)
-			+SHorizontalBox::Slot()
-			.HAlign(HAlign_Left)
-			.AutoWidth()
-			.Padding(FMargin(8.0f, 11.0f, 3.0f, 0.0f))
-				[
-					SNew(STextBlock)
-					.Text(FText::FromName(InArgs._AssetItem->PackName.IsNone() ? TEXT("Unknown Pack") : AssetItem->PackName))
-					.WrapTextAt(300)
-					.Justification(ETextJustify::Left)
-				]
-		];*/
 
 		// File Name
 		+SVerticalBox::Slot()

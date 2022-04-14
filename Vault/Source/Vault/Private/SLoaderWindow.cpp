@@ -1191,6 +1191,9 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 		ImportedAssets.Add(ImportedAsset);
 	}
 
+	FMetadataOps::CopyMetadataToLocal(*InPack);
+	InPack->InProjectVersion = 1;
+
 	ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets);
 
 	// Allow GC to collect

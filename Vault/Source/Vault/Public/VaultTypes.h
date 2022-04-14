@@ -57,6 +57,14 @@ public:
 
 	static FVaultCategory StringToCategory(FString InString);
 
+	/// <summary>
+	/// Checks if the package is in the current project and if it was imported before
+	/// </summary>
+	/// <returns>0 for not in project, 1 for in project and updated, -1 if in project but out of date</returns>
+	int32 CheckInProjectAndVersion();
+
+	int32 InProjectVersion;
+
 protected:
 
 	FSimpleDelegate RenameRequestedEvent;
