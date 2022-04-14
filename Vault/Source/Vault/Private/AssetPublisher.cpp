@@ -458,9 +458,10 @@ FVaultMetadata UAssetPublisher::FindMetadataByPackName(FName PackName)
 	return FVaultMetadata();
 }
 
-FCategory UAssetPublisher::GetAssetCategory(FAssetData AssetData)
+FVaultCategory UAssetPublisher::GetAssetCategory(FAssetData AssetData)
 {
-	FCategory RetCategory = FCategory::Unknown;
+	//UE_LOG(LogVault, Display, TEXT("Asset Class: %s"), *AssetData.GetClass()->GetDisplayNameText().ToString())
+	FVaultCategory RetCategory = FVaultCategory::Unknown;
 	FString RootPath = AssetData.PackageName.ToString();
 	FString OriginalRootString;
 	RootPath.RemoveFromStart(TEXT("/"));

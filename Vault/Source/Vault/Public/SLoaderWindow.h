@@ -10,6 +10,7 @@
 
 typedef TSharedPtr<FTagFilteringItem> FTagFilteringItemPtr;
 typedef TSharedPtr<FDeveloperFilteringItem> FDeveloperFilteringItemPtr;
+typedef TSharedPtr<FCategoryFilteringItem> FCategoryFilteringItemPtr;
 
 
 
@@ -27,6 +28,9 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 	// Populate the Base Asset Tree - No filtering Applied. Called on Construction
 	void PopulateBaseAssetList();
 
+	// Populate Category Array
+	void PopulateCategoryArray();
+
 	// Populate Base Tags List Array
 	void PopulateTagArray();
 
@@ -40,6 +44,9 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 
 	// Create Individual Tile Widget. Bound to the GenerateTile Event
 	TSharedRef<ITableRow> MakeTileViewWidget(TSharedPtr<FVaultMetadata> AssetItem, const TSharedRef<STableViewBase>& OwnerTable);
+
+	// Create the Category Filter Widget. Bound to the GenerateTile Event
+	TSharedRef<ITableRow> MakeCategoryFilterViewWidget(FCategoryFilteringItemPtr inCategory, const TSharedRef<STableViewBase>& OwnerTable);
 
 	// Create the Tag Filter Widget. Bound to the GenerateTile Event
 	TSharedRef<ITableRow> MakeTagFilterViewWidget(FTagFilteringItemPtr inTag, const TSharedRef<STableViewBase>& OwnerTable);
@@ -68,6 +75,13 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 
 	// ---- End Thumbnail Scale System ---- 
 
+
+	// ---- Tag Search System ----
+
+	// Holder for the array of Categories
+	TArray<FCategoryFilteringItemPtr> CategoryCloud;
+
+	// ---- End Tag Search System ----
 
 	// ---- Tag Search System ----
 
@@ -111,6 +125,7 @@ class VAULT_API SLoaderWindow : public SCompoundWidget
 
 	void DeleteAssetPack(TSharedPtr<FVaultMetadata> InPack);
 
+	TSet<FVaultCategory> ActiveCategoryFilters;
 	TSet<FString> ActiveTagFilters;
 	TSet<FName> ActiveDevFilters;
 
@@ -155,6 +170,8 @@ private:
 	bool bHideBadHierarchyAssets;
 
 public:
+
+	void ModifyActiveCategoryFilters(FVaultCategory CategoryModified, bool bFilterThis);
 
 	void ModifyActiveTagFilters(FString TagModified, bool bFilterThis);
 

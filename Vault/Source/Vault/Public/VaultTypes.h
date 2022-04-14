@@ -6,7 +6,7 @@
 #include "Engine/Texture2DDynamic.h"
 
 UENUM()
-enum FCategory
+enum FVaultCategory
 {
 	ThreeD		UMETA(DisplayName = "3D"),
 	Material	UMETA(DisplayName = "Material"),
@@ -27,7 +27,7 @@ public:
 	FName FileId;
 	FString Description;
 	TSet<FString> Tags;
-	TEnumAsByte<FCategory> Category;
+	TEnumAsByte<FVaultCategory> Category;
 	TSoftObjectPtr<UTexture2DDynamic> Thumbnail;
 
 	FDateTime CreationDate;
@@ -53,9 +53,9 @@ public:
 	/** Get the event fired whenever a rename is canceled */
 	FSimpleDelegate& OnRenameCanceled();
 
-	static FString CategoryToString(FCategory InCategory);
+	static FString CategoryToString(FVaultCategory InCategory);
 
-	static FCategory StringToCategory(FString InString);
+	static FVaultCategory StringToCategory(FString InString);
 
 protected:
 
@@ -75,7 +75,7 @@ public:
 		LastModified = FDateTime::UtcNow();
 		RelativePath = FString();
 		MachineID = FString();
-		Category = FCategory::Unknown;
+		Category = FVaultCategory::Unknown;
 	}
 
 	bool IsMetaValid()
@@ -102,6 +102,15 @@ FORCEINLINE bool FVaultMetadata::operator==(const FVaultMetadata& V) const
 		CreationDate == V.CreationDate &&
 		LastModified == V.LastModified;
 }
+
+// Category Filter Struct used for the Loader UI
+struct FCategoryFilteringItem
+{
+	FCategoryFilteringItem() {}
+	virtual ~FCategoryFilteringItem() {}
+	FVaultCategory Category;
+	int UseCount;
+};
 
 // Tag Filter Struct used for the Loader UI
 struct FTagFilteringItem
