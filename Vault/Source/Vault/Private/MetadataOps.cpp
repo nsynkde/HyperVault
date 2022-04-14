@@ -41,7 +41,15 @@ bool FMetadataOps::WriteMetadata(FVaultMetadata& Metadata)
 TArray<FVaultMetadata> FMetadataOps::FindAllMetadataInLibrary()
 {
 	const FString LibraryPath = FVaultSettings::Get().GetAssetLibraryRoot();
+	return FindAllMetadataInFolder(LibraryPath);
+}
 
+TArray<FVaultMetadata> FMetadataOps::FindAllMetadataImportedInProject() {
+	const FString ImportedLibraryPath = FVaultSettings::Get().GetProjectVaultFolder();
+	return FindAllMetadataInFolder(ImportedLibraryPath);
+}
+
+TArray<FVaultMetadata> FMetadataOps::FindAllMetadataInFolder(FString PathToFolder) {
 	TArray<FVaultMetadata> MetaList;
 
 	// Our custom file visitor that seeks out .meta files
@@ -52,7 +60,7 @@ TArray<FVaultMetadata> FMetadataOps::FindAllMetadataInLibrary()
 		FFindMetaFilesVisitor() {}
 		TArray<FString> MetaFilenames;
 		TArray<FString> MetaFilepaths;
-		
+
 		virtual bool Visit(const TCHAR* FilenameOrDirectory, bool bIsDirectory)
 		{
 			if (!bIsDirectory)
@@ -73,7 +81,7 @@ TArray<FVaultMetadata> FMetadataOps::FindAllMetadataInLibrary()
 	FFindMetaFilesVisitor Visitor;
 
 	// Iterate Dir. Visitor will populate with the info we need.
-	IFileManager::Get().IterateDirectory(*LibraryPath, Visitor);
+	IFileManager::Get().IterateDirectory(*PathToFolder, Visitor);
 
 	// Loop through all meta files we found. Use simple for to have a index
 	for (int i = 0; i < Visitor.MetaFilenames.Num(); i++)
@@ -85,11 +93,29 @@ TArray<FVaultMetadata> FMetadataOps::FindAllMetadataInLibrary()
 		TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<>::Create(MetaRaw);
 
 		FJsonSerializer::Deserialize(JsonReader, MetaJson);
-	
+
+		//MetaList.Add(ParseMetaJsonToVaultMetadata(MetaJson));
 		MetaList.Add(ParseMetaJsonToVaultMetadata(MetaJson));
 	}
 
 	return MetaList;
+}
+
+bool FMetadataOps::CopyMetadataToLocal(FVaultMetadata& Metadata)
+{
+	const FString SrcDirectory = FVaultSettings::Get().GetAssetLibraryRoot();
+	const FString TgtDirectory = FVaultSettings::Get().GetProjectVaultFolder();
+	const FString SrcMetaFilepath = SrcDirectory / Metadata.FileId.ToString() + ".meta";
+	const FString TgtMetaFilepath = TgtDirectory / Metadata.FileId.ToString() + ".meta";
+
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+	if (!PlatformFile.DirectoryExists(*TgtDirectory))
+	{
+		PlatformFile.CreateDirectory(*TgtDirectory);
+	}
+
+	return PlatformFile.CopyFile(*TgtMetaFilepath, *SrcMetaFilepath, EPlatformFileRead::AllowWrite, EPlatformFileWrite::AllowRead);
 }
 
 FVaultMetadata FMetadataOps::ParseMetaJsonToVaultMetadata(TSharedPtr<FJsonObject> MetaFile)
@@ -103,6 +129,9 @@ FVaultMetadata FMetadataOps::ParseMetaJsonToVaultMetadata(TSharedPtr<FJsonObject
 	Metadata.FileId = FName(*MetaFile->GetStringField("FileId"));
 	Metadata.Description = MetaFile->GetStringField("Description");
 
+	// Category
+	Metadata.Category = FVaultMetadata::StringToCategory(*MetaFile->GetStringField("Category"));
+
 	// Tags
 	TArray<TSharedPtr<FJsonValue>> TagValues = MetaFile->GetArrayField("Tags");
 	TSet<FString> Tags;
@@ -111,6 +140,7 @@ FVaultMetadata FMetadataOps::ParseMetaJsonToVaultMetadata(TSharedPtr<FJsonObject
 		Tags.Add(TagRaw->AsString());
 	}
 	Metadata.Tags = Tags;
+
 
 	// Dates
 	FDateTime CreationDate;
@@ -147,6 +177,9 @@ TSharedPtr<FJsonObject> FMetadataOps::ParseMetadataToJson(FVaultMetadata Metadat
 	MetaJson->SetStringField("PackName", Metadata.PackName.ToString());
 	MetaJson->SetStringField("FileId", Metadata.FileId.ToString());
 	MetaJson->SetStringField("Description", Metadata.Description);
+
+	// Category
+	MetaJson->SetStringField("Category", FVaultMetadata::CategoryToString(Metadata.Category));
 
 	// Tags
 	TArray<TSharedPtr<FJsonValue>> TagsToWrite;

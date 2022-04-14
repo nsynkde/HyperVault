@@ -50,6 +50,9 @@ public:
 	TArray<FVaultMetadata> MetaFilesCache;
 	void UpdateMetaFilesCache();
 
+	// Holder for meta files that have been imported into the project before
+	TArray<FVaultMetadata> ImportedMetaFileCache;
+
 	void HandleRenameAsset();
 
 	TSharedPtr<class FUICommandList> PluginCommands;

@@ -181,6 +181,12 @@ bool FVaultModule::LoadDependency(const FString& Dir, const FString& Name, void*
 void FVaultModule::UpdateMetaFilesCache()
 {
 	MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
+	ImportedMetaFileCache = FMetadataOps::FindAllMetadataImportedInProject();
+
+	for (int i = 0; i < MetaFilesCache.Num(); i++)
+	{
+		MetaFilesCache[i].CheckInProjectAndVersion();
+	}
 }
 
 void FVaultModule::HandleRenameAsset()

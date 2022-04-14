@@ -5,6 +5,17 @@
 #include "CoreMinimal.h"
 #include "Engine/Texture2DDynamic.h"
 
+UENUM()
+enum FVaultCategory
+{
+	ThreeD		UMETA(DisplayName = "3D"),
+	Material	UMETA(DisplayName = "Material"),
+	FX			UMETA(DisplayName = "FX"),
+	HDRI		UMETA(DisplayName = "HDRI"),
+	Environment	UMETA(DisplayName = "Environment"),
+	Unknown		UMETA(DisplayName = "Unknown")
+};
+
 // Any metadata required for your assets can be added here.
 class VAULT_API FVaultMetadata
 {
@@ -16,6 +27,7 @@ public:
 	FName FileId;
 	FString Description;
 	TSet<FString> Tags;
+	TEnumAsByte<FVaultCategory> Category;
 	TSoftObjectPtr<UTexture2DDynamic> Thumbnail;
 
 	FDateTime CreationDate;
@@ -41,6 +53,18 @@ public:
 	/** Get the event fired whenever a rename is canceled */
 	FSimpleDelegate& OnRenameCanceled();
 
+	static FString CategoryToString(FVaultCategory InCategory);
+
+	static FVaultCategory StringToCategory(FString InString);
+
+	/// <summary>
+	/// Checks if the package is in the current project and if it was imported before
+	/// </summary>
+	/// <returns>0 for not in project, 1 for in project and updated, -1 if in project but out of date</returns>
+	int32 CheckInProjectAndVersion();
+
+	int32 InProjectVersion;
+
 protected:
 
 	FSimpleDelegate RenameRequestedEvent;
@@ -59,6 +83,7 @@ public:
 		LastModified = FDateTime::UtcNow();
 		RelativePath = FString();
 		MachineID = FString();
+		Category = FVaultCategory::Unknown;
 	}
 
 	bool IsMetaValid()
@@ -85,6 +110,15 @@ FORCEINLINE bool FVaultMetadata::operator==(const FVaultMetadata& V) const
 		CreationDate == V.CreationDate &&
 		LastModified == V.LastModified;
 }
+
+// Category Filter Struct used for the Loader UI
+struct FCategoryFilteringItem
+{
+	FCategoryFilteringItem() {}
+	virtual ~FCategoryFilteringItem() {}
+	FVaultCategory Category;
+	int UseCount;
+};
 
 // Tag Filter Struct used for the Loader UI
 struct FTagFilteringItem

@@ -35,6 +35,8 @@ public:
 
 	FString GetThumbnailCacheRoot();
 
+	FString GetProjectVaultFolder();
+
 	// Json Reusable Functions
 	FString GetGlobalSettingsFilePathFull();
 

@@ -76,11 +76,11 @@ bool UAssetPublisher::PackageSelected(TSet<FString> PackageObjects, FVaultMetada
 	// Metadata Writing
 
 	FMetadataOps::WriteMetadata(Meta);
+	FMetadataOps::CopyMetadataToLocal(Meta);
 	SubPackageTask.EnterProgressFrame(0.2f);
 	OnVaultPackagingCompletedDelegate.ExecuteIfBound();
 
 	return true;
-
 }
 
 void UAssetPublisher::UpdateSystemMeta(FVaultMetadata& Metadata)
@@ -148,7 +148,8 @@ int32 UAssetPublisher::CheckForGoodAssetHierarchy(const FAssetData AssetData, TS
 				IsInSameSubfolder = false;
 				BadAssets.Add(Dependency);
 			}
-			else if (!AssetFolders[1].Equals(DependencyFolders[1], ESearchCase::CaseSensitive))
+			// Dependencies are not in the same subfolder
+			else if (!AssetFolders[1].Equals(DependencyFolders[1], ESearchCase::CaseSensitive) || !AssetFolders[2].Equals(DependencyFolders[2], ESearchCase::CaseSensitive))
 			{
 				IsInSameSubfolder = false;
 				BadAssets.Add(Dependency);
@@ -362,6 +363,8 @@ FReply UAssetPublisher::TryPackageAsset(FString FileId, FAssetData ExportAsset, 
 	MainPackageTask.DefaultMessage = LOCTEXT("PackagingText", "Packaging Assets.");
 	MainPackageTask.EnterProgressFrame(0.05F);
 
+	AssetPublishMetadata.Category = GetAssetCategory(ExportAsset);
+
 	// Build a Struct from the metadata to pass to the packager
 	AssetPublishMetadata.ObjectsInPack = ObjectsInPackage;
 	{
@@ -456,4 +459,23 @@ FVaultMetadata UAssetPublisher::FindMetadataByPackName(FName PackName)
 	return FVaultMetadata();
 }
 
+FVaultCategory UAssetPublisher::GetAssetCategory(FAssetData AssetData)
+{
+	//UE_LOG(LogVault, Display, TEXT("Asset Class: %s"), *AssetData.GetClass()->GetDisplayNameText().ToString())
+	FVaultCategory RetCategory = FVaultCategory::Unknown;
+	FString RootPath = AssetData.PackageName.ToString();
+	FString OriginalRootString;
+	RootPath.RemoveFromStart(TEXT("/"));
+	RootPath.Split("/", &OriginalRootString, &RootPath, ESearchCase::IgnoreCase, ESearchDir::FromStart);
+	OriginalRootString = TEXT("/") + OriginalRootString;
 
+	TArray<FString> AssetFolders;
+	RootPath.ParseIntoArray(AssetFolders, TEXT("/"));
+
+	if (AssetFolders[0] == "Vault")
+	{
+		RetCategory = FVaultMetadata::StringToCategory(AssetFolders[1]);
+	}
+	
+	return RetCategory;
+}

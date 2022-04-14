@@ -39,6 +39,64 @@ namespace VaultColumnNames
 	static const FName TagCounterColumnName(TEXT("Used"));
 };
 
+class VAULT_API SCategoryFilterRow : public SMultiColumnTableRow<FCategoryFilteringItemPtr>
+{
+public:
+
+	SLATE_BEGIN_ARGS(SCategoryFilterRow) {}
+	SLATE_ARGUMENT(FCategoryFilteringItemPtr, CategoryData)
+	SLATE_ARGUMENT(TSharedPtr<SLoaderWindow>, ParentWindow)
+	SLATE_END_ARGS()
+
+		void Construct(const FArguments& InArgs, const TSharedRef<STableViewBase>& OwnerTableView)
+	{
+		CategoryData = InArgs._CategoryData;
+		ParentWindow = InArgs._ParentWindow;
+
+		SMultiColumnTableRow<FCategoryFilteringItemPtr>::Construct(FSuperRowType::FArguments().Padding(1.0f), OwnerTableView);
+	}
+
+	void OnCheckBoxStateChanged(ECheckBoxState NewCheckedState)
+	{
+		const bool Filter = NewCheckedState == ECheckBoxState::Checked;
+		ParentWindow->ModifyActiveCategoryFilters(CategoryData->Category, Filter);
+	}
+
+
+	virtual TSharedRef<SWidget> GenerateWidgetForColumn(const FName& ColumnName) override
+	{
+		static const FMargin ColumnItemPadding(5, 0, 5, 0);
+
+		if (ColumnName == VaultColumnNames::TagCheckedColumnName)
+		{
+			return SNew(SCheckBox)
+				.IsChecked(false)
+				.OnCheckStateChanged(this, &SCategoryFilterRow::OnCheckBoxStateChanged);
+		}
+		else if (ColumnName == VaultColumnNames::TagNameColumnName)
+		{
+			return SNew(STextBlock)
+				.Text(FText::FromString(FVaultMetadata::CategoryToString(CategoryData->Category)));
+		}
+		else if (ColumnName == VaultColumnNames::TagCounterColumnName)
+		{
+			return SNew(STextBlock)
+				.Text(FText::FromString(FString::FromInt(CategoryData->UseCount)));
+		}
+
+		else
+		{
+			return SNullWidget::NullWidget;
+		}
+	}
+
+private:
+
+	FCategoryFilteringItemPtr CategoryData;
+	TSharedPtr<SLoaderWindow> ParentWindow;
+
+};
+
 class VAULT_API STagFilterRow : public SMultiColumnTableRow<FTagFilteringItemPtr>
 {
 public:
@@ -158,11 +216,15 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 {
 	RefreshAvailableFiles();
 	PopulateBaseAssetList();
+	PopulateCategoryArray();
 	PopulateTagArray();
 	PopulateDeveloperNameArray();
 
 	ActiveSortingType = SortingTypes::Filename;
 	bSortingReversed = false;
+
+	// TODO: put this in the settings file and load it.
+	bHideBadHierarchyAssets = false;
 
 	SortFilteredAssets(ActiveSortingType, bSortingReversed);
 
@@ -230,6 +292,30 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 					+ SVerticalBox::Slot()
 					.AutoHeight()
 					[
+						SNew(SListView<FCategoryFilteringItemPtr>)
+						.SelectionMode(ESelectionMode::Single)
+						.ListItemsSource(&CategoryCloud)
+						.OnGenerateRow(this, &SLoaderWindow::MakeCategoryFilterViewWidget)
+						.HeaderRow
+						(
+							SNew(SHeaderRow)
+							+ SHeaderRow::Column(VaultColumnNames::TagCheckedColumnName)
+							.DefaultLabel(LOCTEXT("FilteringBoolLabel", "Filter"))
+							.FixedWidth(40.0f)
+
+							+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
+							.DefaultLabel(LOCTEXT("CategoryFilteringTagNameLabel", "Category"))
+
+							+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
+							.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
+						)
+
+					]
+
+					// Tag filtering
+					+ SVerticalBox::Slot()
+					.AutoHeight()
+					[
 						SNew(SListView<FTagFilteringItemPtr>)
 						.SelectionMode(ESelectionMode::Single)
 						.ListItemsSource(&TagCloud)
@@ -245,7 +331,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 							.DefaultLabel(LOCTEXT("TagFilteringTagNameLabel", "Tags"))
 
 							+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
-							.DefaultLabel(LOCTEXT("TagFilteringCounterLabel", "Used"))
+							.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
 						)
 
 					]
@@ -266,21 +352,21 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.FixedWidth(40.0f)
 
 								+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
-								.DefaultLabel(LOCTEXT("TagFilteringTagNameLabel", "Developer"))
+								.DefaultLabel(LOCTEXT("DevFilteringTagNameLabel", "Developer"))
 
 								+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
-								.DefaultLabel(LOCTEXT("TagFilteringCounterLabel", "Used"))
+								.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
 							)
 						]
 
-						// Misc Filtering
-						+SVerticalBox::Slot()
+					// Misc Filtering
+					+SVerticalBox::Slot()
 
-						// Spacer
-						+ SVerticalBox::Slot()
-						[
-							SNew(SSpacer)
-						]
+					// Spacer
+					+ SVerticalBox::Slot()
+					[
+						SNew(SSpacer)
+					]
 
 					// Selected Asset metadata
 					+ SVerticalBox::Slot()
@@ -298,8 +384,7 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 					[
 						SNew(SVerticalBox)
 						+ SVerticalBox::Slot()
-						.FillHeight(0.05)
-						//.AutoHeight()
+						.AutoHeight()
 						[
 							SNew(SHorizontalBox)
 							+ SHorizontalBox::Slot()
@@ -530,6 +615,40 @@ void SLoaderWindow::PopulateBaseAssetList()
 	}
 }
 
+// Show all categories, even if they are unused
+void SLoaderWindow::PopulateCategoryArray()
+{
+	CategoryCloud.Empty();
+
+	TMap<FVaultCategory, FCategoryFilteringItemPtr> CategoryCloudMap;
+
+	for (int i = 0; i <= FVaultCategory::Unknown; i++)
+	{
+		// current category
+		FVaultCategory CurCat = static_cast<FVaultCategory>(i);
+
+		FCategoryFilteringItemPtr CatTemp = MakeShareable(new FCategoryFilteringItem);
+		CatTemp->Category = CurCat;
+		CatTemp->UseCount = 0;
+		CategoryCloudMap.Add(CurCat, CatTemp);
+	}
+
+	for (auto Asset : FVaultModule::Get().MetaFilesCache)
+	{
+		if (Asset.IsMetaValid() && CategoryCloudMap.Contains(Asset.Category))
+		{
+			CategoryCloudMap.Find(Asset.Category)->Get()->UseCount++;
+		}
+		else
+		{
+			CategoryCloudMap.Find(FVaultCategory::Unknown)->Get()->UseCount++;
+		}
+	}
+
+
+	CategoryCloudMap.GenerateValueArray(CategoryCloud);
+}
+
 // Only shows tags that are actually used, no empty tags will appear. 
 void SLoaderWindow::PopulateTagArray()
 {
@@ -607,6 +726,13 @@ TSharedRef<ITableRow> SLoaderWindow::MakeTileViewWidget(TSharedPtr<FVaultMetadat
 			SNew(SAssetTileItem)
 			.AssetItem(AssetItem)
 		];
+}
+
+TSharedRef<ITableRow> SLoaderWindow::MakeCategoryFilterViewWidget(FCategoryFilteringItemPtr inCategory, const TSharedRef<STableViewBase>& OwnerTable)
+{
+	return SNew(SCategoryFilterRow, OwnerTable)
+		.CategoryData(inCategory)
+		.ParentWindow(SharedThis(this));
 }
 
 TSharedRef<ITableRow> SLoaderWindow::MakeTagFilterViewWidget(FTagFilteringItemPtr inTag, const TSharedRef<STableViewBase>& OwnerTable)
@@ -700,6 +826,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 						AssetPublishMetadata.CreationDate = SelectedAsset->CreationDate;
 						AssetPublishMetadata.LastModified = FDateTime::UtcNow();
 						AssetPublishMetadata.Tags = SelectedAsset->Tags;
+						AssetPublishMetadata.Category = SelectedAsset->Category;
 						AssetPublishMetadata.HierarchyBadness = SelectedAsset->HierarchyBadness;
 						AssetPublishMetadata.ObjectsInPack = SelectedAsset->ObjectsInPack;
 
@@ -776,9 +903,9 @@ TSharedRef<SWidget> SLoaderWindow::OnSortingOptionsMenuOpened()
 {
 	FMenuBuilder MenuBuilder(true, nullptr, nullptr, true);
 
-	static const FName FilterSelectionHook("SortingOptionsMenu");
+	static const FName SortingOptionsHook("SortingOptionsMenu");
 
-	MenuBuilder.BeginSection(FilterSelectionHook, LOCTEXT("SortingOptionsMenuLabel", "Sorting Option"));
+	MenuBuilder.BeginSection(SortingOptionsHook, LOCTEXT("SortingOptionsMenuLabel", "Sorting Option"));
 	{
 		MenuBuilder.AddMenuEntry(LOCTEXT("SOM_FilenameLabel", "Package Name"), FText::GetEmpty(), ActiveSortingType == SortingTypes::Filename ? FSlateIcon("VaultStyle", bSortingReversed ? "UpArrow" : "DownArrow") : FSlateIcon("VaultStyle", "Empty"),
 			FUIAction(FExecuteAction::CreateLambda([this]()
@@ -811,6 +938,34 @@ TSharedRef<SWidget> SLoaderWindow::OnSortingOptionsMenuOpened()
 				FGetActionCheckState(),
 				FIsActionButtonVisible()));
 	}
+	MenuBuilder.EndSection();
+
+
+	static const FName FilterOptionsHook("FilterOptionsMenu");
+
+	MenuBuilder.BeginSection(FilterOptionsHook, LOCTEXT("FilterOptionsMenuLabel", "Filtering Options"));
+	{
+		MenuBuilder.AddMenuEntry(
+			LOCTEXT("FOM_HierarchyBadnessLabel", "Hide Assets with bad File Hierarchy"), 
+			FText::GetEmpty(), 
+			FSlateIcon("VaultStyle", "Empty"),
+			FUIAction(
+				FExecuteAction::CreateLambda([this]()
+				{
+					bHideBadHierarchyAssets = !bHideBadHierarchyAssets;
+					RefreshLibrary();
+				}),
+				FCanExecuteAction(),
+				FIsActionChecked::CreateLambda([this]()
+				{
+					return bHideBadHierarchyAssets;
+				}),
+				FIsActionButtonVisible()
+			),
+			NAME_None,
+			EUserInterfaceActionType::ToggleButton);
+	}
+	MenuBuilder.EndSection();
 
 	return MenuBuilder.MakeWidget();
 }
@@ -950,6 +1105,16 @@ void SLoaderWindow::ConstructMetadataWidget(TSharedPtr<FVaultMetadata> AssetMeta
 			.Text(FText::Format(LOCTEXT("Meta_LastModifiedLbl", "Last Modified: {0}"), FText::FromString(AssetMeta->LastModified.ToString())))
 		];
 
+	// Category
+	MetadataWidget->AddSlot()
+		.AutoHeight()
+		.Padding(WordPadding)
+		[
+			SNew(STextBlock)
+			.AutoWrapText(true)
+			.Text(FText::Format(LOCTEXT("MetaCategoryLbl", "Category: {0}"), FText::FromString(FVaultMetadata::CategoryToString(AssetMeta->Category))))
+		];
+
 	// Tags List - Header
 	MetadataWidget->AddSlot()
 		.AutoHeight()
@@ -1026,6 +1191,9 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 		ImportedAssets.Add(ImportedAsset);
 	}
 
+	FMetadataOps::CopyMetadataToLocal(*InPack);
+	InPack->InProjectVersion = 1;
+
 	ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets);
 
 	// Allow GC to collect
@@ -1074,20 +1242,49 @@ void SLoaderWindow::UpdateFilteredAssets()
 	FilteredAssetItems.Empty();
 
 	// Special Condition to check if all boxes are cleared:
-	if (ActiveTagFilters.Num() == 0 && ActiveDevFilters.Num() == 0)
+	if (ActiveCategoryFilters.Num() == 0 && ActiveTagFilters.Num() == 0 && ActiveDevFilters.Num() == 0)
 	{
-		PopulateBaseAssetList();
-		TileView->RebuildList();
-		TileView->ScrollToTop();
-		return;
+		if (bHideBadHierarchyAssets == false)
+		{
+			PopulateBaseAssetList();
+			TileView->RebuildList();
+			TileView->ScrollToTop();
+			return;
+		}
+		else 
+		{
+			for (auto Asset : FVaultModule::Get().MetaFilesCache)
+			{
+				if (Asset.HierarchyBadness <= 0)
+				{
+					FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Asset)));
+				}
+			}
+			TileView->RebuildList();
+			TileView->ScrollToTop();
+			return;
+		}
 	}
 
 	for (auto Asset : FVaultModule::Get().MetaFilesCache)
 	{
+		// Skip this asset if it has bad hierarchy and we are hiding those
+		if (bHideBadHierarchyAssets && Asset.HierarchyBadness > 0)
+		{
+			continue;
+		}
+
+		// Apply all filtered Categories
+		if (ActiveTagFilters.Num() == 0 && ActiveDevFilters.Num() == 0 && ActiveCategoryFilters.Contains(Asset.Category))
+		{
+			FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Asset)));
+			continue;
+		}
+
 		// Apply all filtered Tags
 		for (auto UserTag : Asset.Tags)
 		{
-			if (ActiveTagFilters.Contains(UserTag))
+			if (ActiveTagFilters.Contains(UserTag) && (ActiveDevFilters.Contains(Asset.Author) || ActiveDevFilters.Num() == 0) && (ActiveCategoryFilters.Contains(Asset.Category) || ActiveCategoryFilters.Num() == 0))
 			{
 				FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Asset)));
 				break;
@@ -1095,7 +1292,7 @@ void SLoaderWindow::UpdateFilteredAssets()
 		}
 
 		// Apply All Developer Tags
-		if (ActiveDevFilters.Contains(Asset.Author))
+		if (ActiveTagFilters.Num() == 0 && ActiveDevFilters.Contains(Asset.Author) && (ActiveCategoryFilters.Contains(Asset.Category) || ActiveCategoryFilters.Num() == 0))
 		{
 			FilteredAssetItems.Add(MakeShareable(new FVaultMetadata(Asset)));
 			continue;
@@ -1175,6 +1372,23 @@ void SLoaderWindow::RefreshLibrary()
 void SLoaderWindow::OnAssetUpdateHappened()
 {
 	RefreshLibrary();
+}
+
+void SLoaderWindow::ModifyActiveCategoryFilters(FVaultCategory CategoryModified, bool bFilterThis)
+{
+	UE_LOG(LogVault, Display, TEXT("Enabling CategoryFilter %s"), *FVaultMetadata::CategoryToString(CategoryModified));
+
+	if (bFilterThis)
+	{
+		ActiveCategoryFilters.Add(CategoryModified);
+		UpdateFilteredAssets();
+		SortFilteredAssets();
+		return;
+	}
+
+	ActiveCategoryFilters.Remove(CategoryModified);
+	UpdateFilteredAssets();
+	SortFilteredAssets();
 }
 
 void SLoaderWindow::ModifyActiveTagFilters(FString TagModified, bool bFilterThis)

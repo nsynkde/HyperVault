@@ -164,6 +164,12 @@ FString FVaultSettings::GetThumbnailCacheRoot()
 	return FString();
 }
 
+FString FVaultSettings::GetProjectVaultFolder()
+{
+	FString Path = FPaths::ProjectContentDir() + "/.." + "/Vault";
+	return Path;
+}
+
 bool FVaultSettings::CheckConnection()
 {
 	IsConnected = false;

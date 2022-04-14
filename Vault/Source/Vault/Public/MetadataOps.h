@@ -16,9 +16,15 @@ public:
 
 	static TArray<FVaultMetadata> FindAllMetadataInLibrary();
 
+	static TArray<FVaultMetadata> FindAllMetadataImportedInProject();
+
+	static TArray<FVaultMetadata> FindAllMetadataInFolder(FString PathToFolder);
+
 	static TSet<FString> GetAllTags();
 
 	static TSet<FTagFilteringItem> GetAllTagFilters();
+
+	static bool CopyMetadataToLocal(FVaultMetadata& Metadata);
 
 private:
 

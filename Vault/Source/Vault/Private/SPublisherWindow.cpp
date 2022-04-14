@@ -455,6 +455,33 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 							]
 						]
 					]
+					+ SHorizontalBox::Slot()
+					.Padding(FMargin(1.f, 0.f, 0.f, 0.f))
+					[
+						SNew(SButton)
+						.ContentPadding(FMargin(6.f))
+						.ButtonStyle(FEditorStyle::Get(), "FlatButton.Primary")
+						.OnClicked(this, &SPublisherWindow::OnCaptureImageFromAsset)
+						[
+							SNew(SHorizontalBox)
+							+ SHorizontalBox::Slot()
+							.AutoWidth()
+							[
+								SNew(STextBlock)
+								.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
+								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
+								.Text(FEditorFontGlyphs::Picture_O)
+							]
+							+ SHorizontalBox::Slot()
+							.FillWidth(1)
+							.Padding(FMargin(5, 0, 0, 0))
+							[
+								SNew(STextBlock)
+								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
+								.Text(LOCTEXT("TakeAssetThumbnailLbl", "From Asset"))
+							]
+						]
+					]
 				]
 				+ SVerticalBox::Slot()
 				.AutoHeight()
@@ -599,6 +626,21 @@ FReply SPublisherWindow::OnCaptureImageFromViewport()
 FReply SPublisherWindow::OnCaptureImageFromFile()
 {
 	ShotTexture = SelectThumbnailFromFile();
+	FSlateBrush Brush;
+
+	if (ShotTexture)
+	{
+		Brush.SetResourceObject(ShotTexture);
+		Brush.DrawAs = ESlateBrushDrawType::Image;
+		Brush.SetImageSize(FVector2D(VAULT_PUBLISHER_THUMBNAIL_SIZE, VAULT_PUBLISHER_THUMBNAIL_SIZE));
+		ThumbBrush = Brush;
+	}
+	return FReply::Handled();
+}
+
+FReply SPublisherWindow::OnCaptureImageFromAsset()
+{
+	ShotTexture = CreateThumbnailFromAsset();
 	FSlateBrush Brush;
 
 	if (ShotTexture)
@@ -1070,7 +1112,11 @@ void SPublisherWindow::OnAssetSelected(const FAssetData& InAssetData)
 	// Build our list of dependencies
 	CheckDependencies();
 
-	ShotTexture = CreateThumbnailFromAsset();
+	if (!ShotTexture)
+	{
+		ShotTexture = CreateThumbnailFromAsset();
+	}
+
 	FSlateBrush Brush;
 
 	if (ShotTexture)
