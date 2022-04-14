@@ -423,7 +423,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 							[
 								SNew(STextBlock)
 								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
-								.Text(LOCTEXT("TakeScreenshotLbl", "Capture Viewport"))
+								.Text(LOCTEXT("TakeScreenshotLbl", "From Viewport"))
 							]
 						]
 					]
@@ -470,7 +470,7 @@ void SPublisherWindow::Construct(const FArguments& InArgs)
 								SNew(STextBlock)
 								.Font(FEditorStyle::Get().GetFontStyle("FontAwesome.12"))
 								.TextStyle(FEditorStyle::Get(), "NormalText.Important")
-								.Text(FEditorFontGlyphs::Picture_O)
+								.Text(FEditorFontGlyphs::Archive)
 							]
 							+ SHorizontalBox::Slot()
 							.FillWidth(1)
