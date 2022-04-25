@@ -15,25 +15,28 @@ int32 FVaultMetadata::CheckVersion()
 {
 	InProjectVersion = 0;
 	FVaultMetadata RemoteAsset;
-	for (FVaultMetadata iAsset : FVaultModule::Get().MetaFilesCache)
+	int RemoteAssetIndex = -1;
+	for (int i = 0; i < FVaultModule::Get().MetaFilesCache.Num(); i++)
 	{
-		if (iAsset.FileId == this->FileId)
+		if (FVaultModule::Get().MetaFilesCache[i].FileId == this->FileId)
 		{
-			RemoteAsset = iAsset;
+			RemoteAssetIndex = i;
 			break;
 		}
 	}
 
-	if (RemoteAsset.IsMetaValid())
+	if (RemoteAssetIndex != -1 && FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].IsMetaValid())
 	{
-		if (RemoteAsset.LastModified >= this->LastModified) InProjectVersion = -1;
-		else if (RemoteAsset.LastModified < this->LastModified) InProjectVersion = 1;
+		if (FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].LastModified > this->LastModified) InProjectVersion = -1;
+		else if (FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].LastModified <= this->LastModified) InProjectVersion = 1;
 	}
 	else
 	{
 		// Remote Asset doesn't exist anymore
 		InProjectVersion = -2;
 	}
+
+	FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].InProjectVersion = this->InProjectVersion;
 
 	return InProjectVersion;
 }
