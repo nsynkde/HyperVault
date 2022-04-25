@@ -14,29 +14,21 @@ FSimpleDelegate& FVaultMetadata::OnRenameCanceled()
 int32 FVaultMetadata::CheckVersion()
 {
 	InProjectVersion = 0;
-	FVaultMetadata RemoteAsset;
-	int RemoteAssetIndex = -1;
-	for (int i = 0; i < FVaultModule::Get().MetaFilesCache.Num(); i++)
+	FVaultMetadata LocalAsset;
+	for (FVaultMetadata iAsset : FVaultModule::Get().ImportedMetaFileCache)
 	{
-		if (FVaultModule::Get().MetaFilesCache[i].FileId == this->FileId)
+		if (iAsset.FileId == this->FileId)
 		{
-			RemoteAssetIndex = i;
+			LocalAsset = iAsset;
 			break;
 		}
 	}
 
-	if (RemoteAssetIndex != -1 && FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].IsMetaValid())
+	if (LocalAsset.IsMetaValid())
 	{
-		if (FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].LastModified > this->LastModified) InProjectVersion = -1;
-		else if (FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].LastModified <= this->LastModified) InProjectVersion = 1;
+		if (LocalAsset.LastModified < this->LastModified) InProjectVersion = -1;
+		else if (LocalAsset.LastModified >= this->LastModified) InProjectVersion = 1;
 	}
-	else
-	{
-		// Remote Asset doesn't exist anymore
-		InProjectVersion = -2;
-	}
-
-	FVaultModule::Get().MetaFilesCache[RemoteAssetIndex].InProjectVersion = this->InProjectVersion;
 
 	return InProjectVersion;
 }
