@@ -210,6 +210,8 @@ void FVaultModule::UpdateMetaFilesCache()
 			FMetadataOps::DeleteMetadata(ImportedMetaFileCache[i]);
 		}
 	}
+
+
 }
 
 void FVaultModule::HandleRenameAsset()
