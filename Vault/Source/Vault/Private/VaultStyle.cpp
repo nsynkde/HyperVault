@@ -422,50 +422,56 @@ TSharedRef< FSlateStyleSet > FVaultStyle::Create()
 
 bool FVaultStyle::CacheThumbnailsLocally()
 {
-	TArray<FString> ThumbnailFilesRemote;
-	TArray<FString> ThumbnailFilesCached;
-	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+	// cache thumbnails in an AsyncTask to not stall the editor while caching them
 
-	FString Root = FVaultSettings::Get().GetAssetLibraryRoot();
+	AsyncTask(ENamedThreads::AnyBackgroundHiPriTask, []() {
+		TArray<FString> ThumbnailFilesRemote;
+		TArray<FString> ThumbnailFilesCached;
+		IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
 
-	if (!PlatformFile.DirectoryExists(*FVaultSettings::Get().GetThumbnailCacheRoot()))
-	{
-		PlatformFile.CreateDirectory(*FVaultSettings::Get().GetThumbnailCacheRoot());
-	}
+		FString Root = FVaultSettings::Get().GetAssetLibraryRoot();
 
-	PlatformFile.FindFiles(ThumbnailFilesRemote, *Root, L".png");
-	PlatformFile.FindFiles(ThumbnailFilesCached, *FVaultSettings::Get().GetThumbnailCacheRoot(), L".png");
-
-	FScopedSlowTask CacheThumbnailsTask(ThumbnailFilesRemote.Num(), LOCTEXT("CacheThumbnailsText", "Caching package thumbnails locally."));
-
-	for (FString ThumbnailFile : ThumbnailFilesRemote)
-	{
-		FString Filename = FPaths::GetCleanFilename(ThumbnailFile);
-		if (ThumbnailFilesCached.Contains(FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename)))
+		if (!PlatformFile.DirectoryExists(*FVaultSettings::Get().GetThumbnailCacheRoot()))
 		{
-			if (PlatformFile.GetTimeStamp(*ThumbnailFile) > PlatformFile.GetTimeStamp(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename)))
+			PlatformFile.CreateDirectory(*FVaultSettings::Get().GetThumbnailCacheRoot());
+		}
+
+		PlatformFile.FindFiles(ThumbnailFilesRemote, *Root, L".png");
+		PlatformFile.FindFiles(ThumbnailFilesCached, *FVaultSettings::Get().GetThumbnailCacheRoot(), L".png");
+
+		FScopedSlowTask CacheThumbnailsTask(ThumbnailFilesRemote.Num(), LOCTEXT("CacheThumbnailsText", "Caching package thumbnails locally."));
+
+		for (FString ThumbnailFile : ThumbnailFilesRemote)
+		{
+			FString Filename = FPaths::GetCleanFilename(ThumbnailFile);
+			if (ThumbnailFilesCached.Contains(FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename)))
+			{
+				if (PlatformFile.GetTimeStamp(*ThumbnailFile) > PlatformFile.GetTimeStamp(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename)))
+				{
+					PlatformFile.CopyFile(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename), *ThumbnailFile);
+				}
+			}
+			else
 			{
 				PlatformFile.CopyFile(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename), *ThumbnailFile);
 			}
-		} 
-		else
-		{
-			PlatformFile.CopyFile(*FPaths::Combine(FVaultSettings::Get().GetThumbnailCacheRoot(), Filename), *ThumbnailFile);
+			CacheThumbnailsTask.EnterProgressFrame();
 		}
-		CacheThumbnailsTask.EnterProgressFrame();
-	}
 
-	for (FString ThumbnailCacheFile : ThumbnailFilesCached) {
+		for (FString ThumbnailCacheFile : ThumbnailFilesCached) {
 
-		FString Filename = FPaths::GetCleanFilename(ThumbnailCacheFile);
-		if (!ThumbnailFilesRemote.Contains(FPaths::Combine(Root, Filename)))
-		{
-			PlatformFile.DeleteFile(*ThumbnailCacheFile);
+			FString Filename = FPaths::GetCleanFilename(ThumbnailCacheFile);
+			if (!ThumbnailFilesRemote.Contains(FPaths::Combine(Root, Filename)))
+			{
+				PlatformFile.DeleteFile(*ThumbnailCacheFile);
+			}
 		}
-	}
 
 
-	return false;
+		//return false;
+	});
+
+	return true;
 }
 
 void FVaultStyle::ReloadTextures()
