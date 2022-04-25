@@ -106,7 +106,6 @@ void FVaultModule::ShutdownModule()
 
 void FVaultModule::SpawnOperationsTab()
 {
-	//VaultConnection::Get().Initialize();
 	FVaultStyle::CacheThumbnailsLocally();
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 	TabManager->TryInvokeTab(VaultTabName);
@@ -114,7 +113,6 @@ void FVaultModule::SpawnOperationsTab()
 
 void FVaultModule::SpawnOperationsTab(FName SubTabName)
 {
-	//VaultConnection::Get().Initialize();
 	FVaultStyle::CacheThumbnailsLocally();
 	TSharedRef<FGlobalTabmanager> TabManager = FGlobalTabmanager::Get();
 	TabManager->TryInvokeTab(VaultTabName);
@@ -183,9 +181,34 @@ void FVaultModule::UpdateMetaFilesCache()
 	MetaFilesCache = FMetadataOps::FindAllMetadataInLibrary();
 	ImportedMetaFileCache = FMetadataOps::FindAllMetadataImportedInProject();
 
-	for (int i = 0; i < MetaFilesCache.Num(); i++)
+	/*for (int i = 0; i < MetaFilesCache.Num(); i++)
 	{
-		MetaFilesCache[i].CheckInProjectAndVersion();
+		MetaFilesCache[i].CheckVersion();
+	}*/
+
+	/*auto Iterator = ImportedMetaFileCache.begin();
+
+	while (Iterator != ImportedMetaFileCache.end())
+	{
+		(*Iterator).CheckVersion();
+		if ((*Iterator).InProjectVersion == -2)
+		{
+			ImportedMetaFileCache.Remove(*Iterator);
+			++Iterator;
+		}
+		else
+		{
+			++Iterator;
+		}
+	}*/
+
+	for (int i = 0; i < ImportedMetaFileCache.Num(); i++)
+	{
+		ImportedMetaFileCache[i].CheckVersion();
+		if (ImportedMetaFileCache[i].InProjectVersion == -2)
+		{
+			FMetadataOps::DeleteMetadata(ImportedMetaFileCache[i]);
+		}
 	}
 }
 

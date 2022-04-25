@@ -14,6 +14,8 @@ public:
 
 	static bool WriteMetadata(FVaultMetadata& Metadata);
 
+	static bool DeleteMetadata(FVaultMetadata& Metadata);
+
 	static TArray<FVaultMetadata> FindAllMetadataInLibrary();
 
 	static TArray<FVaultMetadata> FindAllMetadataImportedInProject();

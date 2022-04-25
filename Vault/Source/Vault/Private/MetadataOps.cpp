@@ -38,6 +38,15 @@ bool FMetadataOps::WriteMetadata(FVaultMetadata& Metadata)
 
 }
 
+bool FMetadataOps::DeleteMetadata(FVaultMetadata& Metadata)
+{
+	const FString Directory = FVaultSettings::Get().GetProjectVaultFolder();
+	const FString Filepath = Directory / Metadata.FileId.ToString() + ".meta";
+	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
+
+	return PlatformFile.DeleteFile(*Filepath);
+}
+
 TArray<FVaultMetadata> FMetadataOps::FindAllMetadataInLibrary()
 {
 	const FString LibraryPath = FVaultSettings::Get().GetAssetLibraryRoot();

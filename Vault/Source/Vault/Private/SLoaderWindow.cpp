@@ -1312,7 +1312,7 @@ void SLoaderWindow::SortFilteredAssets(TEnumAsByte<SortingTypes> SortingType, bo
 	case SortingTypes::Filename : 
 		FilteredAssetItems.Sort([&](const TSharedPtr<FVaultMetadata>& a, const TSharedPtr<FVaultMetadata>& b) 
 		{
-			return Reverse ? a->PackName > b->PackName : a->PackName < b->PackName;
+			return Reverse ? b->PackName.LexicalLess(a->PackName) : a->PackName.LexicalLess(b->PackName);
 		});
 		break;
 	case SortingTypes::CreationDate:
