@@ -191,7 +191,7 @@ void FVaultModule::UpdateMetaFilesCache()
 		bool AssetDeleted = true;
 		for (int j = 0; j < MetaFilesCache.Num(); j++)
 		{
-			if (MetaFilesCache[j].PackName == ImportedMetaFileCache[i].PackName && MetaFilesCache[j].FileId == ImportedMetaFileCache[i].FileId)
+			if (MetaFilesCache[j].FileId == ImportedMetaFileCache[i].FileId)
 			{
 				AssetDeleted = false;
 			}
