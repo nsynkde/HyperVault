@@ -322,8 +322,23 @@ FReply UAssetPublisher::TryPackageAsset(FString FileId, FAssetData ExportAsset, 
 	Params.bOverwriteFile = true;
 	Params.CompressionQuality = 90;
 	Params.Format = EDesiredImageFormat::PNG;
+	
+	if (ThumbnailTexture)
+	{
+		UImageWriteBlueprintLibrary::ExportToDisk(ThumbnailTexture, ScreenshotPath, Params);
+	}
+	else
+	{
+		FText ErrorMsg = LOCTEXT("ThumbnailMissingText", "There is now thumbnail selected, please add one.");
+		FText ErrorTitle = LOCTEXT("ThumbnailMissingTitle", "Thumbnail Missing");
+		const EAppReturnType::Type Confirmation = FMessageDialog::Open(EAppMsgType::Ok, ErrorMsg, &ErrorTitle);
 
-	UImageWriteBlueprintLibrary::ExportToDisk(ThumbnailTexture, ScreenshotPath, Params);
+		if (Confirmation == EAppReturnType::Cancel)
+		{
+			UE_LOG(LogVault, Error, TEXT("User cancelled packaging operation due to missing thumbnail"));
+			return FReply::Handled();
+		}
+	}
 
 	FScopedSlowTask MainPackageTask(1.0F, LOCTEXT("AssetsToPackageText", "Collecting assets for packaging."));
 	MainPackageTask.MakeDialog();
