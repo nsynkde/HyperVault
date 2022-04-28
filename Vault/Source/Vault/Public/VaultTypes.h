@@ -60,7 +60,7 @@ public:
 	/// <summary>
 	/// Checks if the package is in the current project and if it was imported before
 	/// </summary>
-	/// <returns>0 for not in project, 1 for in project and updated, -1 if in project but out of date</returns>
+	/// <returns>0 for not in project, 1 for in project and updated, -1 if in project but out of date, 2 for was imported, but base asset not found</returns>
 	int32 CheckVersion();
 
 	int32 InProjectVersion;

@@ -78,9 +78,17 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 						{
 							return FText::FromString(TEXT("There is a newer version available than the one imported in this project."));
 						}
+						else if (AssetItem->InProjectVersion == -2)
+						{
+							return FText::FromString(TEXT("There is a newer version available than the one imported in this project. The asset could also not be found within the project, it was either moved or deleted."));
+						}
 						else if (AssetItem->InProjectVersion == 1)
 						{
 							return FText::FromString(TEXT("Imported Asset is up to data (or newer)."));
+						}
+						else if (AssetItem->InProjectVersion == 2)
+						{
+							return FText::FromString(TEXT("Imported Asset is up to data (or newer), but has been moved or deleted in the project."));
 						}
 						else
 						{
@@ -89,7 +97,7 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 					})
 				.Visibility_Lambda([this]
 					{
-						if (AssetItem->InProjectVersion == -1 || AssetItem->InProjectVersion == 1)
+						if (AssetItem->InProjectVersion == -1 || AssetItem->InProjectVersion >= 1)
 						{
 							return EVisibility::Visible;
 						}
@@ -104,9 +112,18 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 						{
 							return FEditorFontGlyphs::Info_Circle;
 						}
+						else if (AssetItem->InProjectVersion == -2)
+						{
+							return FEditorFontGlyphs::Question_Circle;
+						}
 						else if (AssetItem->InProjectVersion == 1)
 						{
 							return FEditorFontGlyphs::Check_Circle;
+						}
+
+						else if (AssetItem->InProjectVersion == 2)
+						{
+							return FEditorFontGlyphs::Question_Circle;
 						}
 						else
 						{
@@ -119,9 +136,17 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 						{
 							return FLinearColor::Yellow;
 						}
+						else if (AssetItem->InProjectVersion == -2)
+						{
+							return FLinearColor::Gray;
+						}
 						else if (AssetItem->InProjectVersion == 1)
 						{
 							return FLinearColor::Green;
+						}
+						else if (AssetItem->InProjectVersion == 2)
+						{
+							return FLinearColor::Gray;
 						}
 						else
 						{

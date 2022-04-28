@@ -24,6 +24,8 @@
 
 #include "Widgets/Layout/SScalebox.h"
 
+#include "EditorAssetLibrary.h"
+
 
 #define LOCTEXT_NAMESPACE "SVaultLoader"
 
@@ -798,15 +800,15 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 
 	MenuBuilder.BeginSection(FilterSelectionHook, LOCTEXT("AssetContextMenuLabel", "Vault Asset"));
 	{
-		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_AddToProjectLabel", "Add To Project"), FText::GetEmpty(), FSlateIcon(), 
+		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_AddToProjectLabel", "Add To Project"), FText::GetEmpty(), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
 				{
 					LoadAssetPackIntoProject(SelectedAsset);
-				
-				}), 
+
+				}),
 				FCanExecuteAction(),
-				FGetActionCheckState(),
-				FIsActionButtonVisible()));
+					FGetActionCheckState(),
+					FIsActionButtonVisible()));
 
 		MenuBuilder.AddMenuEntry(LOCTEXT("ACM_UpdateVaultAssetLabel", "Update Asset"), FText::GetEmpty(), FSlateIcon(),
 			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
@@ -833,7 +835,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 						FVaultModule::Get().OnAssetForUpdateChosen.ExecuteIfBound(AssetPublishMetadata);
 					}
 
-					
+
 
 				}),
 				FCanExecuteAction(),
@@ -881,7 +883,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 			FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
 				{
 					// Open a Msg dialog to confirm deletion
-					const EAppReturnType::Type Confirmation = FMessageDialog::Open(EAppMsgType::YesNo, LOCTEXT("DeleteViaContextMsg", "Are you sure you want to delete this asset from the Vault Library \nThis option cannot be undone." ));
+					const EAppReturnType::Type Confirmation = FMessageDialog::Open(EAppMsgType::YesNo, LOCTEXT("DeleteViaContextMsg", "Are you sure you want to delete this asset from the Vault Library \nThis option cannot be undone."));
 					if (Confirmation == EAppReturnType::Yes)
 					{
 						// Delete Pack. Handles all the UI stuff from here as well as the file deletes.
@@ -891,6 +893,18 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 				FCanExecuteAction(),
 					FGetActionCheckState(),
 					FIsActionButtonVisible()));
+
+		if (SelectedAsset->InProjectVersion != 0)
+		{
+			MenuBuilder.AddMenuEntry(LOCTEXT("ACM_DeleteLocalMetadataLabel", "Remove Metadata from Project"), LOCTEXT("ACM_DeleteLocalMetadataTooltip", "Delete Local Metadata of this asset that is added when importing an asset.\nThis will remove the indicator shown when the asset has been imported.\nCan be used when an imported asset has been removed from the project."), FSlateIcon(),
+				FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
+					{
+						FMetadataOps::DeleteMetadata(*SelectedAsset);
+					}),
+					FCanExecuteAction(),
+						FGetActionCheckState(),
+						FIsActionButtonVisible()));
+		}
 
 	}
 	MenuBuilder.EndSection();
@@ -1180,7 +1194,7 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 
 	AssetToolsModule.Get().ImportAssetTasks(Tasks);
 
-	FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	
 
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
 
@@ -1188,13 +1202,16 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 	for (FString ImportedPath : Task->ImportedObjectPaths)
 	{
 		FAssetData ImportedAsset = AssetRegistryModule.Get().GetAssetByObjectPath(FName(ImportedPath), true);
+		ImportedAsset.GetAsset();
 		ImportedAssets.Add(ImportedAsset);
 	}
 
 	FMetadataOps::CopyMetadataToLocal(*InPack);
 	InPack->InProjectVersion = 1;
 
-	ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets);
+	FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets, true, true);
+	
 
 	// Allow GC to collect
 	Task->RemoveFromRoot();
