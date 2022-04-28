@@ -1,5 +1,7 @@
 #include "VaultTypes.h"
 #include "Vault.h"
+#include "EditorAssetLibrary.h"
+#include "AssetRegistryModule.h"
 
 FSimpleDelegate& FVaultMetadata::OnRenameRequested()
 {
@@ -24,10 +26,42 @@ int32 FVaultMetadata::CheckVersion()
 		}
 	}
 
+	
+
+
+
 	if (LocalAsset.IsMetaValid())
 	{
-		if (LocalAsset.LastModified < this->LastModified) InProjectVersion = -1;
-		else if (LocalAsset.LastModified >= this->LastModified) InProjectVersion = 1;
+		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+		FString ObjectPath = LocalAsset.ObjectsInPack.Array()[0];
+		ObjectPath.RemoveFromStart(TEXT("/Game/"));
+		ObjectPath = FPaths::ProjectContentDir() + ObjectPath + ".uasset";
+
+		if (LocalAsset.LastModified < this->LastModified) {
+			InProjectVersion = -1;
+			if (!AssetRegistryModule.Get().IsLoadingAssets())
+			{
+				if (!FPaths::FileExists(ObjectPath))
+				{
+					InProjectVersion = -2;
+				}
+			}
+		}
+		else if (LocalAsset.LastModified >= this->LastModified)
+		{
+			InProjectVersion = 1;
+			if (!FPaths::FileExists(ObjectPath)) {
+				InProjectVersion = 2;
+			}
+
+			/*if (!AssetRegistryModule.Get().IsLoadingAssets())
+			{
+				if (!UEditorAssetLibrary::DoesAssetExist(this->ObjectsInPack.Array()[0]))
+				{
+					InProjectVersion = 2;
+				}
+			}*/
+		}
 	}
 
 	return InProjectVersion;

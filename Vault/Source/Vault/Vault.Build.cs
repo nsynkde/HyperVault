@@ -38,7 +38,9 @@ public class Vault : ModuleRules
 				"AssetRegistry",
 				"PakFileUtilities",
 				"DesktopPlatform",
-				"ImageWriteQueue"
+				"ImageWriteQueue",
+				"EditorScriptingUtilities",
+				"Blutility"
 			});
 	}
 }
