@@ -110,20 +110,20 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 					{
 						if (AssetItem->InProjectVersion == -1)
 						{
-							return FEditorFontGlyphs::Info_Circle;
+							return FEditorFontGlyphs::Info;
 						}
 						else if (AssetItem->InProjectVersion == -2)
 						{
-							return FEditorFontGlyphs::Question_Circle;
+							return FEditorFontGlyphs::Question;
 						}
 						else if (AssetItem->InProjectVersion == 1)
 						{
-							return FEditorFontGlyphs::Check_Circle;
+							return FEditorFontGlyphs::Check;
 						}
 
 						else if (AssetItem->InProjectVersion == 2)
 						{
-							return FEditorFontGlyphs::Question_Circle;
+							return FEditorFontGlyphs::Question;
 						}
 						else
 						{
