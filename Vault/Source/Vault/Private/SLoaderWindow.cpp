@@ -279,68 +279,68 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 							.TextStyle(FVaultStyle::Get(), "MetaTitleText")
 						]
 
-					// Asset List Amount
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					.HAlign(HAlign_Left)
-					.VAlign(VAlign_Top)
-					.Padding(0,0,0,5)
-					[
-						SNew(STextBlock)
-						.Text(this, &SLoaderWindow::DisplayTotalAssetsInLibrary)
-					]
+						// Asset List Amount
+						+ SVerticalBox::Slot()
+						.AutoHeight()
+						.HAlign(HAlign_Left)
+						.VAlign(VAlign_Top)
+						.Padding(0,0,0,5)
+						[
+							SNew(STextBlock)
+							.Text(this, &SLoaderWindow::DisplayTotalAssetsInLibrary)
+						]
 
-					// Tag filtering
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					[
-						SNew(SListView<FCategoryFilteringItemPtr>)
-						.SelectionMode(ESelectionMode::Single)
-						.ListItemsSource(&CategoryCloud)
-						.OnGenerateRow(this, &SLoaderWindow::MakeCategoryFilterViewWidget)
-						.HeaderRow
-						(
-							SNew(SHeaderRow)
-							+ SHeaderRow::Column(VaultColumnNames::TagCheckedColumnName)
-							.DefaultLabel(LOCTEXT("FilteringBoolLabel", "Filter"))
-							.FixedWidth(40.0f)
+						// Category filtering
+						+ SVerticalBox::Slot()
+						.AutoHeight()
+						[
+							SNew(SListView<FCategoryFilteringItemPtr>)
+							.SelectionMode(ESelectionMode::Single)
+							.ListItemsSource(&CategoryCloud)
+							.OnGenerateRow(this, &SLoaderWindow::MakeCategoryFilterViewWidget)
+							.HeaderRow
+							(
+								SNew(SHeaderRow)
+								+ SHeaderRow::Column(VaultColumnNames::TagCheckedColumnName)
+								.DefaultLabel(LOCTEXT("FilteringBoolLabel", "Filter"))
+								.FixedWidth(40.0f)
 
-							+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
-							.DefaultLabel(LOCTEXT("CategoryFilteringTagNameLabel", "Category"))
+								+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
+								.DefaultLabel(LOCTEXT("CategoryFilteringTagNameLabel", "Category"))
 
-							+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
-							.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
-						)
+								+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
+								.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
+							)
 
-					]
+						]
 
-					// Tag filtering
-					+ SVerticalBox::Slot()
-					.AutoHeight()
-					[
-						SNew(SListView<FTagFilteringItemPtr>)
-						.SelectionMode(ESelectionMode::Single)
-						.ListItemsSource(&TagCloud)
-						.OnGenerateRow(this, &SLoaderWindow::MakeTagFilterViewWidget)
-						.HeaderRow
-						(
-							SNew(SHeaderRow)
-							+ SHeaderRow::Column(VaultColumnNames::TagCheckedColumnName)
-							.DefaultLabel(LOCTEXT("FilteringBoolLabel", "Filter"))
-							.FixedWidth(40.0f)
+						// Tag filtering
+						+ SVerticalBox::Slot()
+						.FillHeight(0.95f)
+						[
+							SNew(SListView<FTagFilteringItemPtr>)
+							.SelectionMode(ESelectionMode::Single)
+							.ListItemsSource(&TagCloud)
+							.OnGenerateRow(this, &SLoaderWindow::MakeTagFilterViewWidget)
+							.HeaderRow
+							(
+								SNew(SHeaderRow)
+								+ SHeaderRow::Column(VaultColumnNames::TagCheckedColumnName)
+								.DefaultLabel(LOCTEXT("FilteringBoolLabel", "Filter"))
+								.FixedWidth(40.0f)
 
-							+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
-							.DefaultLabel(LOCTEXT("TagFilteringTagNameLabel", "Tags"))
+								+ SHeaderRow::Column(VaultColumnNames::TagNameColumnName)
+								.DefaultLabel(LOCTEXT("TagFilteringTagNameLabel", "Tags"))
 
-							+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
-							.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
-						)
+								+ SHeaderRow::Column(VaultColumnNames::TagCounterColumnName)
+								.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
+							)
 
-					]
+						]
 
-					// Developer Filtering
-					+ SVerticalBox::Slot()
-					.AutoHeight()
+						// Developer Filtering
+						+ SVerticalBox::Slot()
+						.AutoHeight()
 						[
 							SNew(SListView<FDeveloperFilteringItemPtr>)
 							.SelectionMode(ESelectionMode::Single)
@@ -360,18 +360,6 @@ void SLoaderWindow::Construct(const FArguments& InArgs, const TSharedRef<SDockTa
 								.DefaultLabel(LOCTEXT("FilteringCounterLabel", "Count"))
 							)
 						]
-
-					// Misc Filtering
-					+SVerticalBox::Slot()
-
-					// Spacer
-					+ SVerticalBox::Slot()
-					[
-						SNew(SSpacer)
-					]
-
-					// Selected Asset metadata
-					+ SVerticalBox::Slot()
 					] // close SBorder
 					] // ~Close Left Splitter Area
 							
@@ -684,6 +672,11 @@ void SLoaderWindow::PopulateTagArray()
 		}
 	}
 
+	TagCloudMap.KeySort([](const FString& A, const FString& B) 
+		{
+			return A < B;
+		});
+
 	// The Map version is easier to work with during generation, but since we have to use an Array, we convert our cloud map into an array now:
 	TagCloudMap.GenerateValueArray(TagCloud);
 
@@ -900,6 +893,7 @@ TSharedPtr<SWidget> SLoaderWindow::OnAssetTileContextMenuOpened()
 				FUIAction(FExecuteAction::CreateLambda([this, SelectedAsset]()
 					{
 						FMetadataOps::DeleteMetadata(*SelectedAsset);
+						RefreshLibrary();
 					}),
 					FCanExecuteAction(),
 						FGetActionCheckState(),
@@ -1210,6 +1204,13 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 	InPack->InProjectVersion = 1;
 
 	FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+	TArray<FString> ImportedAssetFolders;
+	ImportedAssetFolders.Add("");
+	FString FileName;
+	FString FileExtension;
+	FPaths::Split(Task->ImportedObjectPaths[0], ImportedAssetFolders[0], FileName, FileExtension);
+
+	ContentBrowserModule.Get().SyncBrowserToFolders(ImportedAssetFolders);
 	ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets, true, true);
 	
 
@@ -1377,12 +1378,16 @@ FReply SLoaderWindow::OnRefreshLibraryClicked()
 void SLoaderWindow::RefreshLibrary()
 {
 	RefreshAvailableFiles();
+	PopulateCategoryArray();
 	PopulateTagArray();
 	PopulateDeveloperNameArray();
 
 	//SearchBox->AdvanceSearch//
 	//TileView->RebuildList();
 	UpdateFilteredAssets();
+	if (!SearchBox->GetText().IsEmpty()) {
+		OnSearchBoxChanged(SearchBox->GetText());
+	}
 	SortFilteredAssets(ActiveSortingType, bSortingReversed);
 }
 
