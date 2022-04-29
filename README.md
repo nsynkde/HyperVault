@@ -1,6 +1,6 @@
 # HyperVault
 
-![UnrealVersion](https://img.shields.io/badge/Unreal%20Engine-4.27.2-brightgreen) ![PluginVersion)](https://img.shields.io/badge/Version-v0.4.0-brightgreen.svg)
+![UnrealVersion](https://img.shields.io/badge/Unreal%20Engine-4.27.2-brightgreen) ![PluginVersion)](https://img.shields.io/badge/Version-v0.4.1-brightgreen.svg)
 
 Forked from [https://github.com/Unreal-Vault/Vault-Dev](https://github.com/Unreal-Vault/Vault-Dev). Customized by [NSYNK](https://github.com/nsynkde).
 
