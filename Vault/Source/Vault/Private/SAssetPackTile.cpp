@@ -80,7 +80,7 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 						}
 						else if (AssetItem->InProjectVersion == -2)
 						{
-							return FText::FromString(TEXT("There is a newer version available than the one imported in this project. The asset could also not be found within the project, it was either moved or deleted."));
+							return FText::FromString(TEXT("The asset could also not be found within the project, it was either moved or deleted.\nThere also is a newer version available than the one that was imported in this project."));
 						}
 						else if (AssetItem->InProjectVersion == 1)
 						{
@@ -88,7 +88,7 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 						}
 						else if (AssetItem->InProjectVersion == 2)
 						{
-							return FText::FromString(TEXT("Imported Asset is up to data (or newer), but has been moved or deleted in the project."));
+							return FText::FromString(TEXT("Asset has been moved or deleted in the project.\nBut the imported version is still up to data."));
 						}
 						else
 						{
@@ -110,20 +110,20 @@ void SAssetTileItem::Construct(const FArguments& InArgs)
 					{
 						if (AssetItem->InProjectVersion == -1)
 						{
-							return FEditorFontGlyphs::Info_Circle;
+							return FEditorFontGlyphs::Info;
 						}
 						else if (AssetItem->InProjectVersion == -2)
 						{
-							return FEditorFontGlyphs::Question_Circle;
+							return FEditorFontGlyphs::Question;
 						}
 						else if (AssetItem->InProjectVersion == 1)
 						{
-							return FEditorFontGlyphs::Check_Circle;
+							return FEditorFontGlyphs::Check;
 						}
 
 						else if (AssetItem->InProjectVersion == 2)
 						{
-							return FEditorFontGlyphs::Question_Circle;
+							return FEditorFontGlyphs::Question;
 						}
 						else
 						{

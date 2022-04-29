@@ -164,7 +164,6 @@ bool FVaultModule::LoadDependency(const FString& Dir, const FString& Name, void*
 		UE_LOG(LogVault, Log, TEXT("%s exists"), *Name);
 	}
 
-	//FPlatformProcess::PushDllDirectory(*Dir);
 
 	Handle = FPlatformProcess::GetDllHandle(*Path);
 
