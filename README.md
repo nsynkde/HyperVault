@@ -1,10 +1,11 @@
 # HyperVault
 
-![UnrealVersion](https://img.shields.io/badge/Unreal%20Engine-4.27.2-brightgreen) ![PluginVersion)](https://img.shields.io/badge/Version-v0.4.1-brightgreen.svg)
+![UnrealVersion](https://img.shields.io/badge/Unreal%20Engine-4.27.2-brightgreen) ![PluginVersion)](https://img.shields.io/badge/Version-v0.4.2-brightgreen.svg)
+
 
 Forked from [https://github.com/Unreal-Vault/Vault-Dev](https://github.com/Unreal-Vault/Vault-Dev). Customized by [NSYNK](https://github.com/nsynkde).
 
-Welcome to the Vault. An Unreal Engine 4 asset library to make sharing and reusing assets easy. 
+Welcome to the Vault. An Unreal Engine 5 asset library to make sharing and reusing assets easy. 
 
 Check out the full website for more details: [https://unreal-vault.github.io/](https://unreal-vault.github.io/)
 
