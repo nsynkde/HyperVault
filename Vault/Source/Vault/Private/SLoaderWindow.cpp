@@ -716,7 +716,7 @@ void SLoaderWindow::PopulateDeveloperNameArray()
 TSharedRef<ITableRow> SLoaderWindow::MakeTileViewWidget(TSharedPtr<FVaultMetadata> AssetItem, const TSharedRef<STableViewBase>& OwnerTable)
 {
 	return SNew(STableRow<TSharedPtr<FVaultMetadata>>, OwnerTable)
-		.Style(FAppStyle::Get(), "ContentBrowser.AssetListView.ColumnListTableRow")
+		.Style(FEditorStyle::Get(), "ContentBrowser.AssetListView.TableRow")
 		.Padding(FMargin(5.0f, 5.0f, 5.0f, 25.0f))
 		[
 			SNew(SAssetTileItem)
