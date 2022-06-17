@@ -21,6 +21,7 @@
 #include "ContentBrowserModule.h"
 #include "IContentBrowserSingleton.h"
 #include "EditorStyleSet.h"
+#include "Kismet/KismetStringLibrary.h"
 
 #include "Widgets/Layout/SScalebox.h"
 
@@ -1171,29 +1172,108 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 	// All files live in same directory, so we just do some string mods to get the pack file that matches the meta file.
 	const FString AssetToImportTemp = LibraryPath / InPack->FileId.ToString() + ".upack";
 
-	// UPacks import natively with Unreal, so no need to try to use the PakUtilities, better to use the native importer and let Unreal handle the Pak concepts. 
-	FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
+//#pragma region ImportTask
+//		// UPacks import natively with Unreal, so no need to try to use the PakUtilities, better to use the native importer and let Unreal handle the Pak concepts. 
+//		// Appearantly not, as unreal crashes with some assets, but UnrealPak does not...
+//		FAssetToolsModule& AssetToolsModule = FModuleManager::Get().LoadModuleChecked<FAssetToolsModule>("AssetTools");
+//
+//		// Set up our Import Task
+//		UAssetImportTask* Task = NewObject<UAssetImportTask>();
+//		Task->AddToRoot();
+//		Task->bAutomated = true;
+//		Task->bReplaceExisting = true;
+//		Task->bSave = true;
+//		Task->Filename = AssetToImportTemp;
+//		Task->DestinationPath = "/Game";
+//
+//		TArray<UAssetImportTask*> Tasks;
+//		Tasks.Add(Task);
+//
+//		AssetToolsModule.Get().ImportAssetTasks(Tasks);
+//
+//		FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
+//
+//		TArray<FAssetData> ImportedAssets;
+//		for (FString ImportedPath : Task->ImportedObjectPaths)
+//		{
+//			FAssetData ImportedAsset = AssetRegistryModule.Get().GetAssetByObjectPath(FName(ImportedPath), true);
+//			ImportedAsset.GetAsset();
+//			ImportedAssets.Add(ImportedAsset);
+//		}
+//
+//		FMetadataOps::CopyMetadataToLocal(*InPack);
+//		InPack->InProjectVersion = 1;
+//
+//		FContentBrowserModule& ContentBrowserModule = FModuleManager::Get().LoadModuleChecked<FContentBrowserModule>("ContentBrowser");
+//		TArray<FString> ImportedAssetFolders;
+//		ImportedAssetFolders.Add("");
+//		FString FileName;
+//		FString FileExtension;
+//		FPaths::Split(Task->ImportedObjectPaths[0], ImportedAssetFolders[0], FileName, FileExtension);
+//
+//		ContentBrowserModule.Get().SyncBrowserToFolders(ImportedAssetFolders);
+//		ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets, true, true);
+//
+//
+//		// Allow GC to collect
+//		Task->RemoveFromRoot();
+//#pragma endregion
+//		UE_LOG(LogVault, Warning, TEXT("Failed to import using Editors import for .upack! Falling back to UnrealPak."));
 
-	// Set up our Import Task
-	UAssetImportTask* Task = NewObject<UAssetImportTask>();
-	Task->AddToRoot();
-	Task->bAutomated = true;
-	Task->bReplaceExisting = true;
-	Task->bSave = true;
-	Task->Filename = AssetToImportTemp;
-	Task->DestinationPath = "/Game";
+#pragma region ExecuteUnrealPak
+	FScopedSlowTask ImportTask(1.0F, LOCTEXT("ImportingAssetsText", "Importing Assets..."));
+	ImportTask.MakeDialog();
 
-	TArray<UAssetImportTask*> Tasks;
-	Tasks.Add(Task);
+	TArray<FString> TargetPathArray;
 
-	AssetToolsModule.Get().ImportAssetTasks(Tasks);
+	for (FString path : InPack->ObjectsInPack)
+	{
+		if (TargetPathArray.Num() <= 0)
+		{
+			path.ParseIntoArray(TargetPathArray, TEXT("/"));
+		}
+		else
+		{
+			TArray<FString> CurrentPathArray;
+			path.ParseIntoArray(CurrentPathArray, TEXT("/"));
 
-	
+			for (int i = 0; i < CurrentPathArray.Num(); i++)
+			{
+				if (TargetPathArray.Num() > i && !CurrentPathArray[i].Equals(TargetPathArray[i]))
+				{
+					for (int j = TargetPathArray.Num() - 1; j >= i; j--) {
+						TargetPathArray.RemoveAt(j);
+					}
+					break;
+				}
+			}
+		}
+	}
+
+	ImportTask.EnterProgressFrame(0.1f);
+
+	TargetPathArray.RemoveAt(0);
+	const FString TargetPath = FPaths::ProjectContentDir() + "/" + UKismetStringLibrary::JoinStringArray(TargetPathArray, TEXT("/"));
+	UE_LOG(LogVault, Display, TEXT("%s"), *TargetPath);
+
+
+	const FString cmd = "-Extract \"" + AssetToImportTemp + "\" \"" + TargetPath + "\"";
+
+	UE_LOG(LogVault, Display, TEXT("UnrealPak Command: %s"), *cmd);
+
+	bool bPakResult = ExecuteUnrealPak(*cmd);
+		
+	if (!bPakResult)
+	{
+		UE_LOG(LogVault, Error, TEXT("Failed to import Asset!"));
+		return;
+	}
+
+	ImportTask.EnterProgressFrame(0.8f);
 
 	FAssetRegistryModule& AssetRegistryModule = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry");
-
 	TArray<FAssetData> ImportedAssets;
-	for (FString ImportedPath : Task->ImportedObjectPaths)
+	for (FString ImportedPath : InPack->ObjectsInPack)
 	{
 		FAssetData ImportedAsset = AssetRegistryModule.Get().GetAssetByObjectPath(FName(ImportedPath), true);
 		ImportedAsset.GetAsset();
@@ -1208,14 +1288,22 @@ void SLoaderWindow::LoadAssetPackIntoProject(TSharedPtr<FVaultMetadata> InPack)
 	ImportedAssetFolders.Add("");
 	FString FileName;
 	FString FileExtension;
-	FPaths::Split(Task->ImportedObjectPaths[0], ImportedAssetFolders[0], FileName, FileExtension);
+	FString ImportedFilePath = "";
+	for (auto& Element : InPack->ObjectsInPack)
+	{
+		ImportedFilePath = Element;
+		break;
+	}
+	FPaths::Split(ImportedFilePath, ImportedAssetFolders[0], FileName, FileExtension);
+
+
+	ImportTask.EnterProgressFrame(0.1f);
 
 	ContentBrowserModule.Get().SyncBrowserToFolders(ImportedAssetFolders);
 	ContentBrowserModule.Get().SyncBrowserToAssets(ImportedAssets, true, true);
-	
 
-	// Allow GC to collect
-	Task->RemoveFromRoot();
+#pragma endregion
+
 }
 
 void SLoaderWindow::DeleteAssetPack(TSharedPtr<FVaultMetadata> InPack)
